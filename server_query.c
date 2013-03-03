@@ -128,7 +128,7 @@ void writeParsed(char *result) {
 	FILE *fichero;   
    	fichero = fopen(FICHERO, "w");
 	unsigned char *s;
-	for(s = cadena; *s; s++){
+	for(s = result; *s; s++){
 		*s = tolower((unsigned char)*s);
 		if(s[0]=="32"){
 			s[0]="13";
