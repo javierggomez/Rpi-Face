@@ -1,3 +1,19 @@
+//    Copyright (C) 2013 Javier García, Julio Alberto González
+
+//    This file is part of Rpi-Face.
+//    Rpi-Face is free software: you can redistribute it and/or modify
+//    it under the terms of the GNU General Public License as published by
+//    the Free Software Foundation, either version 3 of the License, or
+//    (at your option) any later version.
+
+//    Rpi-Face is distributed in the hope that it will be useful,
+//    but WITHOUT ANY WARRANTY; without even the implied warranty of
+//    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+//    GNU General Public License for more details.
+
+//    You should have received a copy of the GNU General Public License
+//    along with Rpi-Face.  If not, see <http://www.gnu.org/licenses/>.
+
 // Programa para procesar los parámetros de una URL (CGI
 // método GET).
 
@@ -8,7 +24,7 @@
 #define MAX_LENGTH 65536
 #define FORMAT "%c%s%c"
 #define KEY_MESSAGE "message"
-#define FICHERO fichero.raw
+#define FICHERO "fichero.raw"
 
 int main(int argc, char **argv, char **env) {
 	// Iniciar la salida HTML
@@ -110,13 +126,12 @@ void lowerCase(char *result, char *value) {
 	char *pResult=result; // puntero para recorrer result
 	char *end=value+strlen(value); // dónde acabar la conversión
 	while (pValue<end) {
-		*pValue = tolower((unsigned char)*pValue);
-		if(*pValue>96 && *pValue < 123 || *pValue>47 && *pValue < 58){
-			*pResult=*pValue;
-			pValue++;
+		*pResult=tolower((unsigned char)*pValue);
+		if(*pResult>=97 && *pResult <= 122 || *pResult>=48 && *pResult <= 57 ||*pResult>=160 && *pResult <= 163||
+		*pResult == 130){
 			pResult++;
 		}
-
+		pValue++;
 	}
 	*pResult=0; // terminar result con '\0'
 	
@@ -128,12 +143,13 @@ void writeParsed(char *result) {
 	FILE *fichero;   
    	fichero = fopen(FICHERO, "w");
 	unsigned char *s;
+	unsigned char temp;
 	for(s = result; *s; s++){
-		*s = tolower((unsigned char)*s);
-		if(s[0]=="32"){
-			s[0]="13";
+		temp=*s;
+		if(temp==32){
+			temp=13;
 		}
-		fputc(s, fichero);		
+		fputc(temp, fichero);		
 	}
 	fclose(fichero);	
 }
