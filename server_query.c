@@ -8,6 +8,7 @@
 #define MAX_LENGTH 65536
 #define FORMAT "%c%s%c"
 #define KEY_MESSAGE "message"
+#define FICHERO fichero.raw
 
 int main(int argc, char **argv, char **env) {
 	// Iniciar la salida HTML
@@ -35,6 +36,8 @@ int main(int argc, char **argv, char **env) {
 			"<br/><input type=\"submit\" value=\"Enviar\"/></form>", result);
 	if ((*result)!=0) {
 		printf("<p><b>Mensaje recibido: </b>%s</p>", result);
+		lowerCase(result, result);
+		writeParsed(result);
 	} else {
 		printf("<p>No se recibi&oacute; ning&uacute;n mensaje</p>");
 	}
@@ -106,10 +109,33 @@ void lowerCase(char *result, char *value) {
 	char *pValue=value; // puntero para recorrer value
 	char *pResult=result; // puntero para recorrer result
 	char *end=value+strlen(value); // dónde acabar la conversión
+	while (pValue<end) {
+		*pValue = tolower((unsigned char)*pValue);
+		if(*pValue>96 && *pValue < 123 || *pValue>47 && *pValue < 58){
+			*pResult=*pValue;
+			pValue++;
+			pResult++;
+		}
 
+	}
+	*pResult=0; // terminar result con '\0'
 	
 }
 
+//Escribe la cadena en un fichero
 
+void writeParsed(char *result) {
+	FILE *fichero;   
+   	fichero = fopen(FICHERO, "w");
+	unsigned char *s;
+	for(s = cadena; *s; s++){
+		*s = tolower((unsigned char)*s);
+		if(s[0]=="32"){
+			s[0]="13";
+		}
+		fputc(s, fichero);		
+	}
+	fclose(fichero);	
+}
 
 
