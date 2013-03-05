@@ -15,6 +15,8 @@
 //    along with Rpi-Face.  If not, see <http://www.gnu.org/licenses/>.
 
 // Código para controlar la cara.
+#include <unistd.h>
+
 #include "face_controller.h"
 #include "servo_controller.h"
 
@@ -76,6 +78,23 @@ Devuelve: 1 si ha habido algún error, y 0 si todo ha ido bien.
 */
 int face_setFace(int fd, unsigned const char *positions){
 	return servo_setAllServosPositions(fd, positions); 
+}
+
+/*
+Hace que la cara parpadee un número de veces
+Argumentos: fd: descriptor de archivo obtenido de uart_initialize.
+times: número de veces a parpadear
+current: posición actual de los ojos
+Devuelve: 1 si ha habido algún error, y 0 si todo ha ido bien.
+//Hay que probar si puede mantener el ritmo el robot (incluso si no necesita el tiempo ese de espera y lo almacena en un buffer todo)
+*/
+int face_blink(int fd, int times, unsigned char current){
+	for (int i=0;i<=times;i++) {
+		servo_setServoPosition(fd, 1, 0);
+		usleep(10000);
+		servo_setServoPosition(fd, 1, current);
+	}
+	return 1;
 }
 
 /*

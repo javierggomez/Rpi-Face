@@ -13,19 +13,3 @@
 
 //    You should have received a copy of the GNU General Public License
 //    along with Rpi-Face.  If not, see <http://www.gnu.org/licenses/>.
-
-#ifndef FACE_CONTROLLER
-#define FACE_CONTROLLER
-extern const unsigned char FACE_HAPPY[8];
-extern const unsigned char FACE_SAD[8];
-extern const unsigned char FACE_SURPRISE[8];
-extern const unsigned char FACE_ANGRY[8];
-extern const unsigned char FACE_NEUTRAL[8];
-int face_initialize();
-int face_setAsHome(int fd);
-int face_goToHome(int fd);
-int face_setFace(int fd, unsigned const char *positions);
-int face_turnOff(int fd);
-int face_blink(int fd, int times, unsigned char current);
-void face_close(int fd);
-#endif

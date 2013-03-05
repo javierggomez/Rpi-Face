@@ -33,6 +33,9 @@ int main(void) {
 	printf("Cara contenta\n");
 	face_setFace(fd,FACE_HAPPY);
 		usleep(5*DELAY);
+	printf("Parpadeando\n");
+	face_blink(fd,4,1);
+		usleep(5*DELAY);
 
 	printf("Guardando posición por defecto\n");
 	face_setAsHome(fd);

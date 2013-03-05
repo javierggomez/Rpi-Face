@@ -17,9 +17,15 @@
 
 CC=gcc
 CFLAGS=-Wall -std=gnu99
-EXECUTABLES=move_face face_controller_test servo_controller_test servo_controllerTest rpi_uart_test
+EXECUTABLES=set_happy.cgi server_query.cgi move_face face_controller_test servo_controller_test servo_controllerTest rpi_uart_test
 
 all: $(EXECUTABLES) 
+
+set_happy.cgi: set_happy.o face_controller.o servo_controller.o rpi_uart.o
+	$(CC) $(CFLAGS) -o set_happy.cgi set_happy.o face_controller.o servo_controller.o rpi_uart.o
+
+server_query.cgi: server_query.o
+	$(CC) $(CFLAGS) -o server_query.cgi server_query.o
 
 move_face: move_face.o face_controller.o servo_controller.o rpi_uart.o
 	$(CC) $(CFLAGS) -o move_face move_face.o face_controller.o servo_controller.o rpi_uart.o

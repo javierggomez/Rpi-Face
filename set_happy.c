@@ -14,18 +14,30 @@
 //    You should have received a copy of the GNU General Public License
 //    along with Rpi-Face.  If not, see <http://www.gnu.org/licenses/>.
 
-#ifndef FACE_CONTROLLER
-#define FACE_CONTROLLER
-extern const unsigned char FACE_HAPPY[8];
-extern const unsigned char FACE_SAD[8];
-extern const unsigned char FACE_SURPRISE[8];
-extern const unsigned char FACE_ANGRY[8];
-extern const unsigned char FACE_NEUTRAL[8];
-int face_initialize();
-int face_setAsHome(int fd);
-int face_goToHome(int fd);
-int face_setFace(int fd, unsigned const char *positions);
-int face_turnOff(int fd);
-int face_blink(int fd, int times, unsigned char current);
-void face_close(int fd);
-#endif
+#include <stdio.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <stdlib.h>
+#include <errno.h>
+
+#include "face_controller.h"
+#include "set_happy.h"
+
+
+int main(int argc, char **argv, char **env) {
+	int fd=face_initialize();
+	// Iniciar la salida HTML
+	printf("Content-type:text/html\n\n");
+	printf("<html><head><title>Enviar mensaje</title></head><body>");
+	printf("<h1>Enviar mensaje</h1>"
+			"<form action=\"server_query.cgi\" method=\"GET\">"
+			"<textarea name=\"message\" cols=40 rows=2></textarea>"
+			"<br/><input type=\"submit\" value=\"Enviar\"/></form>");
+	printf("<a href='set_happy.cgi' >Poner cara contenta</a>");
+	printf("</body></html>");
+	usleep(100000);
+	face_setFace(fd, FACE_HAPPY);
+	face_close(fd);
+	return 0;
+}
+

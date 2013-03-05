@@ -20,11 +20,15 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
+
+#include "server_query.h"
 
 #define MAX_LENGTH 65536
 #define FORMAT "%c%s%c"
 #define KEY_MESSAGE "message"
-#define FICHERO "fichero.raw"
+#define FICHERO "/var/www/cgi-bin/data/fichero.raw"
+#define COMMAND "/var/www/cgi-bin/text_analyzer /var/www/cgi-bin/data/fichero.raw"
 
 int main(int argc, char **argv, char **env) {
 	// Iniciar la salida HTML
@@ -50,10 +54,12 @@ int main(int argc, char **argv, char **env) {
 			"<form action=\"server_query.cgi\" method=\"GET\">"
 			"<textarea name=\"message\" cols=40 rows=2>%s</textarea>"
 			"<br/><input type=\"submit\" value=\"Enviar\"/></form>", result);
+	printf("<a href='set_happy.cgi' >Poner cara contenta</a>");
 	if ((*result)!=0) {
 		printf("<p><b>Mensaje recibido: </b>%s</p>", result);
 		lowerCase(result, result);
 		writeParsed(result);
+		system(COMMAND);
 	} else {
 		printf("<p>No se recibi&oacute; ning&uacute;n mensaje</p>");
 	}
@@ -127,11 +133,30 @@ void lowerCase(char *result, char *value) {
 	char *end=value+strlen(value); // dónde acabar la conversión
 	while (pValue<end) {
 		*pResult=tolower((unsigned char)*pValue);
-		if(*pResult>=97 && *pResult <= 122 || *pResult>=48 && *pResult <= 57 ||*pResult>=160 && *pResult <= 163||
-		*pResult == 130){
+		if(*pValue==195) {
+			switch (*(++pValue)) {
+				case 145:
+				case 177:
+					*pResult=195;
+					pResult[1]=177;
+					pResult+=2;
+					break;
+				case 129:
+				case 137:
+				case 141:
+				case 147:
+				case 154:
+					*pResult=195;
+					pResult[1]=(*pValue)+32;
+					pResult+=2;
+					break;
+			}
+			
+		} if((*pResult>=97 && *pResult <= 122) || (*pResult>=48 && *pResult <= 57) || (*pResult==' ')){//Minúsculas, números sin acentos
 			pResult++;
 		}
 		pValue++;
+			
 	}
 	*pResult=0; // terminar result con '\0'
 	
@@ -142,15 +167,16 @@ void lowerCase(char *result, char *value) {
 void writeParsed(char *result) {
 	FILE *fichero;   
    	fichero = fopen(FICHERO, "w");
-	unsigned char *s;
-	unsigned char temp;
+	char *s;
+	char temp;
 	for(s = result; *s; s++){
 		temp=*s;
-		if(temp==32){
-			temp=13;
+		if(temp==' '){
+			temp='\n';
 		}
 		fputc(temp, fichero);		
 	}
+	fputc('\n', fichero);
 	fclose(fichero);	
 }
 
