@@ -21,16 +21,23 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
+#include <unistd.h>
 
 #include "server_query.h"
+#include "face_controller.h"
 
 #define MAX_LENGTH 65536
 #define FORMAT "%c%s%c"
 #define KEY_MESSAGE "message"
+#define KEY_FACE "face"
 #define FICHERO "/var/www/cgi-bin/data/fichero.raw"
-#define COMMAND "/var/www/cgi-bin/text_analyzer /var/www/cgi-bin/data/fichero.raw"
+#define SEMAPHORE "/var/www/cgi-bin/data/semaphore.t3"
+#define DELAY 100000
+
+
 
 int main(int argc, char **argv, char **env) {
+	const unsigned char* POSITIONS[]={FACE_HAPPY, FACE_SAD, FACE_SURPRISE, FACE_ANGRY, FACE_NEUTRAL};
 	// Iniciar la salida HTML
 	printf("Content-type:text/html\n\n");
 	printf("<html><head><title>Enviar mensaje</title></head><body>");
@@ -40,31 +47,50 @@ int main(int argc, char **argv, char **env) {
 	strncat(query, getenv("QUERY_STRING"), MAX_LENGTH);
 	int length=strlen(query);
 	char *result=(char*)malloc(length);
+	char *message=(char*)malloc(length);
 	result[0]=0;
+	message[0]=0;
 	if (length>1) {
 		strncat(query, "&", 1);
 		if (getValue(result, query, KEY_MESSAGE)) {
 			// si la variable message existe, sustituir caracteres
 			parseValue(result, result);
+			strcpy(message, result);
 			
-		} 
+		} else if (getValue(result, query, KEY_FACE)) {
+			int face=atoi(result);
+			if (face>=0&&face<5) {
+				int fd=face_initialize();
+				usleep(DELAY);
+				face_setFace(fd, POSITIONS[face]);
+				face_close(fd);
+			}
+		}
 	}
 	// Volver a mostrar el formulario
 	printf("<h1>Enviar mensaje</h1>"
 			"<form action=\"server_query.cgi\" method=\"GET\">"
 			"<textarea name=\"message\" cols=40 rows=2>%s</textarea>"
-			"<br/><input type=\"submit\" value=\"Enviar\"/></form>", result);
-	printf("<a href='set_happy.cgi' >Poner cara contenta</a>");
-	if ((*result)!=0) {
+			"<br/><input type=\"submit\" value=\"Enviar\"/></form>", message);
+	printf("<a href='server_query.cgi?face=0' >Poner cara contenta</a><br/>");
+	printf("<a href='server_query.cgi?face=1' >Poner cara triste</a><br/>");
+	printf("<a href='server_query.cgi?face=2' >Poner cara enfadada</a><br/>");
+	printf("<a href='server_query.cgi?face=3' >Poner cara sorprendida</a><br/>");
+	printf("<a href='server_query.cgi?face=4' >Poner cara neutral</a><br/>");
+
+	if ((*message)!=0) {
 		printf("<p><b>Mensaje recibido: </b>%s</p>", result);
 		lowerCase(result, result);
 		writeParsed(result);
-		system(COMMAND);
+		FILE *semaphore;   
+   		semaphore = fopen(SEMAPHORE, "w"); //Se crea un semáforo para que el programa principal analice el fichero
+		fclose(semaphore);
 	} else {
 		printf("<p>No se recibi&oacute; ning&uacute;n mensaje</p>");
 	}
 	printf("</body></html>");
 	free(result);
+	free(message);
 	return 0;
 }
 

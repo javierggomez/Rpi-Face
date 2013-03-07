@@ -107,6 +107,7 @@ void weightedAverage(unsigned char *result, const unsigned char *array1, const u
 		result[i]=(unsigned char)(weight1*(float)array1[i]+weight2*(float)array2[i]);
 		fprintf(stderr, "%hhu ", result[i]);
 	}
+	fprintf(stderr, "\n");
 }
 
 void calculatePosition(unsigned char *result, float tag) {
