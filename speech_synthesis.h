@@ -14,10 +14,8 @@
 //    You should have received a copy of the GNU General Public License
 //    along with Rpi-Face.  If not, see <http://www.gnu.org/licenses/>.
 
-#ifndef SERVER_QUERY
-#define SERVER_QUERY
-int getValue(char *result, char *query, const char *key);
-void parseValue(char *result, char *value);
-void lowerCase(char *result, char *value);
-void writeParsed(char *result);
+#ifndef SPEECH_SYNTHESIS
+#define SPEECH_SYNTHESIS
+void say_file(const char *file);
+void say_text(const char *text);
 #endif

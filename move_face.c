@@ -23,6 +23,7 @@
 
 #include "move_face.h"
 #include "face_controller.h"
+#include "speech_synthesis.h"
 
 #define FACE_DELAY 100000
 #define POSITION_LENGTH 8
@@ -34,6 +35,7 @@
 #define POSITION_MAX FACE_HAPPY
 #define POSITION_MIN FACE_SAD
 #define DEFAULT_TAG TAG_MAX
+#define MESSAGE_FILE "/var/www/cgi-bin/data/fichero.raw"
 
 int main(int argc, char **argv) {
 	int exit_status=0;
@@ -65,6 +67,8 @@ int main(int argc, char **argv) {
 	// Guardar posición
 	if (!savePosition(position, POSITION_FILE)) exit_status=1;
 	face_close(fd);
+	// Reproducir mensaje
+	say_file(MESSAGE_FILE);
 	return exit_status;
 }
 

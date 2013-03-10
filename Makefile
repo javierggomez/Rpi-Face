@@ -15,9 +15,10 @@
 #    along with Rpi-Face.  If not, see <http://www.gnu.org/licenses/>.
 
 
-CC=gcc
-CFLAGS=-Wall -std=gnu99
-EXECUTABLES=set_face.cgi server_query.cgi move_face face_controller_test servo_controller_test servo_controllerTest rpi_uart_test
+CC=g++
+CFLAGS=-Wall
+FESTIVAL_FLAGS=-I/usr/include/festival -I/usr/lib/speech_tools/include -Lfestival/src/lib -leststring -lestools -lestbase -lFestival
+EXECUTABLES=server_query.cgi move_face face_controller_test servo_controller_test servo_controllerTest rpi_uart_test
 
 all: $(EXECUTABLES) 
 
@@ -27,8 +28,15 @@ set_face.cgi: set_face.o face_controller.o servo_controller.o rpi_uart.o
 server_query.cgi: server_query.o face_controller.o servo_controller.o rpi_uart.o
 	$(CC) $(CFLAGS) -o server_query.cgi server_query.o face_controller.o servo_controller.o rpi_uart.o
 
-move_face: move_face.o face_controller.o servo_controller.o rpi_uart.o
-	$(CC) $(CFLAGS) -o move_face move_face.o face_controller.o servo_controller.o rpi_uart.o
+move_face: move_face.o speech_synthesis.o face_controller.o servo_controller.o rpi_uart.o
+	$(CC) -o move_face move_face.o speech_synthesis.o face_controller.o servo_controller.o rpi_uart.o $(FESTIVAL_FLAGS)
+
+move_face.o: move_face.c Makefile
+	$(CC) -o move_face.o -c move_face.c
+
+speech_synthesis.o: speech_synthesis.c speech_synthesis.h
+	$(CC) -c speech_synthesis.c $(FESTIVAL_FLAGS) -o speech_synthesis.o
+
 face_controller_test: face_controller_test.o face_controller.o servo_controller.o rpi_uart.o
 	$(CC) $(CFLAGS) -o face_controller_test face_controller_test.o face_controller.o servo_controller.o rpi_uart.o
 

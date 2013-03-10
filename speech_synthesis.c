@@ -14,10 +14,20 @@
 //    You should have received a copy of the GNU General Public License
 //    along with Rpi-Face.  If not, see <http://www.gnu.org/licenses/>.
 
-#ifndef SERVER_QUERY
-#define SERVER_QUERY
-int getValue(char *result, char *query, const char *key);
-void parseValue(char *result, char *value);
-void lowerCase(char *result, char *value);
-void writeParsed(char *result);
-#endif
+#include <festival.h>
+#include <stdio.h>
+#include "speech_synthesis.h"
+
+void say_file(const char *file) {
+	festival_initialize(true, 210000);
+	festival_eval_command("(voice_el_diphone)");
+	festival_say_file(file);
+	festival_wait_for_spooler();
+}
+
+void say_text(const char *text) {
+	festival_initialize(true, 210000);
+	festival_eval_command("(voice_el_diphone)");
+	festival_say_text(text);
+	festival_wait_for_spooler();
+}

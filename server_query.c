@@ -99,10 +99,10 @@ int main(int argc, char **argv, char **env) {
 // query: QUERY_STRING de la petición, precedida y seguida por
 // el carácter '&'; key, nombre de la variable a obtener. 
 // Devuelve: 1 si se encontró la variable, 0 si no. 
-int getValue(char *result, const char *query, const char *key) {
+int getValue(char *result, char *query, const char *key) {
 	// Buscamos el nombre de la variable precedido de '&' y seguido de '='
 	int length=strlen(key);
-	char *mod_key=malloc(length+3);
+	char *mod_key=(char*)malloc(length+3);
 	sprintf(mod_key, "%c%s%c", '&', key, '=');
 	char *position=strstr(query, mod_key);
 	if ((position!=NULL)) {
