@@ -19,5 +19,6 @@
 int getValue(char *result, char *query, const char *key);
 void parseValue(char *result, char *value);
 void lowerCase(char *result, char *value);
+unsigned char lowerChar(unsigned char c);
 void writeParsed(char *result);
 #endif

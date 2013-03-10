@@ -79,9 +79,15 @@ int main(int argc, char **argv, char **env) {
 	printf("<a href='server_query.cgi?face=4' >Poner cara neutral</a><br/>");
 
 	if ((*message)!=0) {
-		printf("<p><b>Mensaje recibido: </b>%s</p>", result);
-		lowerCase(result, result);
-		writeParsed(result);
+		
+		fprintf(stderr, "\n");
+		printf("<p><b>Mensaje recibido: </b>%s</p>", message);
+		lowerCase(message, message);
+		writeParsed(message);
+		unsigned int length=(unsigned int)strlen(message);
+		for (unsigned int i=0;i<length;i++) {
+			fprintf(stderr, "%hhu ",message[i] );
+		}
 		FILE *semaphore;   
    		semaphore = fopen(SEMAPHORE, "w"); //Se crea un semáforo para que el programa principal analice el fichero
 		fclose(semaphore);
@@ -108,7 +114,7 @@ int getValue(char *result, char *query, const char *key) {
 	if ((position!=NULL)) {
 		// si lo encontramos, obtenemos el valor, que empieza
 		// en *(position+length+2) y acaba en el siguiente '&'
-		sscanf(position+length+2, "%[^&]&*65536s", result);
+		sscanf(position+length+2, "%[^&]&", result);
 		free(mod_key);
 		return 1;
 	}
@@ -158,27 +164,27 @@ void lowerCase(char *result, char *value) {
 	char *pResult=result; // puntero para recorrer result
 	char *end=value+strlen(value); // dónde acabar la conversión
 	while (pValue<end) {
-		*pResult=tolower((unsigned char)*pValue);
-		if(*pValue==195) {
-			switch (*(++pValue)) {
-				case 145:
-				case 177:
-					*pResult=195;
-					pResult[1]=177;
-					pResult+=2;
-					break;
-				case 129:
-				case 137:
-				case 141:
-				case 147:
-				case 154:
-					*pResult=195;
-					pResult[1]=(*pValue)+32;
-					pResult+=2;
-					break;
-			}
+		*pResult=lowerChar((unsigned char)*pValue);
+		// if(*pValue==195) {
+		// 	switch (*(++pValue)) {
+		// 		case 145:
+		// 		case 177:
+		// 			*pResult=195;
+		// 			pResult[1]=177;
+		// 			pResult+=2;
+		// 			break;
+		// 		case 129:
+		// 		case 137:
+		// 		case 141:
+		// 		case 147:
+		// 		case 154:
+		// 			*pResult=195;
+		// 			pResult[1]=(*pValue)+32;
+		// 			pResult+=2;
+		// 			break;
+		// 	}
 			
-		} if((*pResult>=97 && *pResult <= 122) || (*pResult>=48 && *pResult <= 57) || (*pResult==' ')){//Minúsculas, números sin acentos
+		if((*pResult>=97 && *pResult <= 122) || (*pResult>=48 && *pResult <= 57) || (*pResult==' ') || (*pResult==225) || (*pResult==233) || (*pResult==237) || (*pResult==243) || (*pResult==250) || (*pResult==241)){//Minúsculas, números sin acentos
 			pResult++;
 		}
 		pValue++;
@@ -187,6 +193,21 @@ void lowerCase(char *result, char *value) {
 	*pResult=0; // terminar result con '\0'
 	
 }
+
+unsigned char lowerChar(unsigned char c) {
+	switch (c) {
+		case 193:
+		case 201:
+		case 205:
+		case 211:
+		case 218:
+		case 209:
+			return c+32;
+			break;
+		default:
+			return tolower(c);
+	}
+} 
 
 //Escribe la cadena en un fichero
 
