@@ -27,8 +27,8 @@ all: $(EXECUTABLES)
 set_face.cgi: set_face.o face_controller.o servo_controller.o rpi_uart.o
 	$(CC) $(CFLAGS) -o set_happy.cgi set_face.o face_controller.o servo_controller.o rpi_uart.o
 
-server_query.cgi: server_query.o face_controller.o servo_controller.o rpi_uart.o
-	$(CC) $(CFLAGS) -o server_query.cgi server_query.o face_controller.o servo_controller.o rpi_uart.o
+server_query.cgi: server_query.o speech_synthesis.o face_controller.o servo_controller.o rpi_uart.o
+	$(CC) $(CFLAGS) -o server_query.cgi server_query.o speech_synthesis.o face_controller.o servo_controller.o rpi_uart.o $(FESTIVAL_FLAGS)
 
 move_face: move_face.o speech_synthesis.o face_controller.o servo_controller.o rpi_uart.o
 	$(CC) -o move_face move_face.o speech_synthesis.o face_controller.o servo_controller.o rpi_uart.o $(FESTIVAL_FLAGS)

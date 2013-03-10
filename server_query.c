@@ -25,6 +25,7 @@
 
 #include "server_query.h"
 #include "face_controller.h"
+#include "speech_synthesis.h"
 
 #define MAX_LENGTH 65536
 #define FORMAT "%c%s%c"
@@ -38,6 +39,7 @@
 
 int main(int argc, char **argv, char **env) {
 	const unsigned char* POSITIONS[]={FACE_HAPPY, FACE_SAD, FACE_SURPRISE, FACE_ANGRY, FACE_NEUTRAL};
+	const char POSITIONS_MSGS[5][256]={"/var/www/cgi-bin/messages/FACE_HAPPY.txt", "/var/www/cgi-bin/messages/FACE_SAD.txt","/var/www/cgi-bin/messages/FACE_SURPRISE.txt","/var/www/cgi-bin/messages/FACE_ANGRY.txt","/var/www/cgi-bin/messages/FACE_NEUTRAL.txt",};
 	// Iniciar la salida HTML
 	printf("Content-type:text/html\n\n");
 	printf("<html><head><title>Enviar mensaje</title></head><body>");
@@ -64,6 +66,7 @@ int main(int argc, char **argv, char **env) {
 				usleep(DELAY);
 				face_setFace(fd, POSITIONS[face]);
 				face_close(fd);
+				say_file(POSITIONS_MSGS[face]);
 			}
 		}
 	}
