@@ -21,8 +21,11 @@
 
 # Direccion raiz de los binarios de ACOPOST
 DIR_ACO=/var/www/cgi-bin/acopost
+FILE_MESSAGE=/var/www/cgi-bin/data/fichero.raw
 FILE_ANALYSIS=/var/www/cgi-bin/data/analysis.t3
 T3=$DIR_ACO/acopost-1.8.6/bin/t3
+MOVE_FACE=/var/www/cgi-bin/move_face
+
 
 #Definición de variables.
 sum=0
@@ -36,10 +39,10 @@ LEX_EMO=$DIR_ACO/FINALEMO.lex
 #LEX_EMO="alternative.lex"
 
 #Llamada al programa T3 de la libreria ACOPOST que realiza el etiquetado.
-$T3 $NGRAM_EMO $LEX_EMO $1 $FILE_ANALYSIS
+$T3 $NGRAM_EMO $LEX_EMO $FILE_MESSAGE $FILE_ANALYSIS
  
 
 #Dado que los resultados se muestran a modo de una nota por palabra, este comando lo que hace es calcular la media de lo que hay en la segunda columna de texto de el archivo que te devuelve el etiquetador, es decir, la media de la nota de las palabras.  
-average=`awk '{if(NR>4) {sum+=$2; ++t}} END { print sum/t}' $FILE_ANALYSIS` 
-echo $average >&2
-/var/www/cgi-bin/move_face $average
+# average=`awk '{if(NR>4) {sum+=$2; ++t}} END { print sum/t}' $FILE_ANALYSIS` 
+# echo $average >&2
+# $MOVE_FACE $average

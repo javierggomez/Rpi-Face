@@ -20,6 +20,8 @@ CFLAGS=-Wall
 FESTIVAL_FLAGS=-I/usr/include/festival -I/usr/lib/speech_tools/include -Lfestival/src/lib -leststring -lestools -lestbase -lFestival
 EXECUTABLES=server_query.cgi move_face face_controller_test servo_controller_test servo_controllerTest rpi_uart_test
 
+default: server_query.cgi move_face
+
 all: $(EXECUTABLES) 
 
 set_face.cgi: set_face.o face_controller.o servo_controller.o rpi_uart.o
@@ -52,3 +54,6 @@ rpi_uart_test: rpi_uart_test.o rpi_uart.o
 .PHONY = clean 
 clean: 
 	-rm -rf *.o $(EXECUTABLES) *~
+
+install: text_analyzer server_query.cgi move_face data acopost
+	-mv -t /var/www/cgi-bin/ text_analyzer server_query.cgi move_face data acopost
