@@ -20,6 +20,7 @@
 #include "face_controller.h"
 #include "servo_controller.h"
 
+// Posiciones predeterminadas de la cara
 const unsigned char FACE_HAPPY[8]= {127,0, 0, 0, 127, 127, 240,240};
 const unsigned char FACE_SAD[8]= {127,0, 0, 0, 30, 210, 10,10};
 const unsigned char FACE_SURPRISE[8]= {200,0, 0, 0, 20, 170, 127,127};
@@ -40,7 +41,8 @@ Argumentos: fd: descriptor de archivo obtenido de uart_initialize.
 Devuelve: 1 si ha habido algún error, y 0 si todo ha ido bien.
 */
 int face_setAsHome(int fd){
-	int e=0;
+	int e=0; // flag de error, si alguna de las operaciones da error será distinto de 0
+	// poner en cada servo la posición actual como posición por defecto
 	e+=servo_setAsHome(fd, 1);
 	for (int i=5;i<9;i++) {
 		e+=servo_setAsHome(fd, i);
@@ -59,7 +61,8 @@ Argumentos: fd: descriptor de archivo obtenido de uart_initialize.
 Devuelve: 1 si ha habido algún error, y 0 si todo ha ido bien.
 */
 int face_goToHome(int fd){
-	int e=0;
+	int e=0; // flag de error, si alguna de las operaciones da error será distinto de 0
+	// volver cada servo a su posición por defecto
 	e+=servo_goToHome(fd, 1);
 	for (int i=5;i<9;i++) {
 		e+=servo_goToHome(fd, i);
@@ -86,13 +89,12 @@ Argumentos: fd: descriptor de archivo obtenido de uart_initialize.
 times: número de veces a parpadear
 current: posición actual de los ojos
 Devuelve: 1 si ha habido algún error, y 0 si todo ha ido bien.
-//Hay que probar si puede mantener el ritmo el robot (incluso si no necesita el tiempo ese de espera y lo almacena en un buffer todo)
 */
 int face_blink(int fd, int times, unsigned char current){
 	for (int i=0;i<=times;i++) {
-		servo_setServoPosition(fd, 1, 0);
+		servo_setServoPosition(fd, 1, 1); // cerrar ojos
 		usleep(10000);
-		servo_setServoPosition(fd, 1, current);
+		servo_setServoPosition(fd, 1, current); // volver a la posición inicial
 	}
 	return 1;
 }
@@ -103,7 +105,8 @@ Argumentos: fd: descriptor de archivo obtenido de uart_initialize.
 Devuelve: 1 si ha habido algún error, y 0 si todo ha ido bien.
 */
 int face_turnOff(int fd){
-	int e=0;
+	int e=0; // flag de error, si alguna de las operaciones da error será distinto de 0
+	// apagar cada servo
 	e+=servo_turnOff(fd, 1);
 	for (int i=5;i<9;i++) {
 		e+=servo_turnOff(fd, i);
@@ -118,7 +121,7 @@ int face_turnOff(int fd){
 
 /*
 Termina el acceso a la cara
-Argumentos: fd: descriptor de archivo obtenido de uart_initialize.
+Argumentos: fd: descriptor de archivo obtenido de face_initialize.
 */
 void face_close(int fd){
 	servo_close(fd);

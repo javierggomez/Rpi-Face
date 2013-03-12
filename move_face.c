@@ -25,18 +25,34 @@
 #include "face_controller.h"
 #include "speech_synthesis.h"
 
+// Tiempo de espera para mover la cara tras inicializarla
 #define FACE_DELAY 100000
+// Longitud de los datos de posición (8 caracteres)
 #define POSITION_LENGTH 8
+// Archivo donde se guarda la posición anterior
 #define POSITION_FILE "/var/www/cgi-bin/data/savedata.mfc"
+// Peso de la posición anterior en la ponderación
 #define WEIGHT_PREVIOUS 0.5
+// Peso de la posición calculada en la ponderación
 #define WEIGHT_CURRENT 0.5
+// Nota máxima de un mensaje
 #define TAG_MAX 9
+// Nota mínima de un mensaje
 #define TAG_MIN 1
+// Posición correspondiente a la nota máxima
 #define POSITION_MAX FACE_HAPPY
+// Posición correspondiente a la nota mínima
 #define POSITION_MIN FACE_SAD
+// Nota por defecto, si se llama al programa sin argumentos
 #define DEFAULT_TAG TAG_MAX
+// Archivo donde está guardado el mensaje
 #define MESSAGE_FILE "/var/www/cgi-bin/data/fichero.raw"
 
+
+// Programa para calcular la nueva posición de la cara a partir de la antigua 
+// (guardada en el archivo POSITION_FILE) y la valoración del último mensaje
+// (pasada como argv[1]). Calcula la nueva posición, mueve la cara, reproduce
+// el mensaje (que está en el archivo MESSAGE_FILE) y guarda la nueva posición.
 int main(int argc, char **argv) {
 	int exit_status=0;
 	// Iniciar comunicación con la cabeza
@@ -72,30 +88,42 @@ int main(int argc, char **argv) {
 	return exit_status;
 }
 
+// Carga la posición anterior del fichero
+// Entradas:
+// - position: array donde se devolverá el resultado
+// - filename: nombre del archivo donde está guardada la posición
+// Valor de retorno: 0 si hay error, 1 si no
 int loadPosition(unsigned char *position, const char *filename) {
-	FILE *file=fopen(filename, "r");
+	FILE *file=fopen(filename, "r"); // abrir archivo
 	if (file==NULL) {
 		perror("move_face: ");
 		return 0;
 	}
 	for (int i=0;i<POSITION_LENGTH;i++) {
+		// Leer 8 números entre 0 y 255 (unsigned char, %hhu)
 		if(fscanf(file, "%hhu ", position+i)<=0) {
 			fprintf(stderr, "Formato de datos guardados no válido");
 			fclose(file);
 			return 0;
 		}
 	}
-	fclose(file);
+	fclose(file); // cerrar archivo
 	return 1;
 }
 
+// Guarda la posición en el fichero
+// Entradas:
+// - position: posición a guardar
+// - filename: nombre del fichero
+// Valor de retorno: 0 si hay error, 1 si no
 int savePosition(unsigned char *position, const char *filename) {
-	FILE *file=fopen(filename, "w");
+	FILE *file=fopen(filename, "w"); // abrir o crear archivo
 	if (file==NULL) {
 		perror("move_face: No se pudo guardar la posición: ");
 		return 0;
 	}
 	for (int i=0;i<POSITION_LENGTH;i++) {
+		// Escribir 8 números entre 0 y 255
 		if(fprintf(file, "%hhu ", position[i])<=0) {
 			perror("move_face: No se pudo guardar la posición: ");
 			fclose(file);
@@ -106,6 +134,14 @@ int savePosition(unsigned char *position, const char *filename) {
 	return 1;
 }
 
+// Calcula la media ponderada de dos arrays de unsigned char
+// Entradas:
+// - result: array donde se devolverá el resultado
+// - array1: primer array de datos
+// - array2: segundo array de datos
+// - weight1: peso del primer array en la media
+// - weight2: peso del segundo array en la media
+// - length: longitud de los arrays
 void weightedAverage(unsigned char *result, const unsigned char *array1, const unsigned char *array2, float weight1, float weight2, int length) {
 	for (int i=0;i<length;i++) {
 		result[i]=(unsigned char)(weight1*(float)array1[i]+weight2*(float)array2[i]);
@@ -114,9 +150,17 @@ void weightedAverage(unsigned char *result, const unsigned char *array1, const u
 	fprintf(stderr, "\n");
 }
 
+// Calcula la posición correspondiente a la nota tag, utilizando
+// una interpolación lineal entre POSITION_MIN y POSITION_MAX
+// según el valor de tag entre TAG_MIN y TAG_MAX
+// Entradas:
+// - result: array donde se devolverá el resultado
+// - tag nota del mensaje
 void calculatePosition(unsigned char *result, float tag) {
+	// Asegurar que tag está dentro de los límites
 	if (tag<TAG_MIN) tag=TAG_MIN;
 	else if (tag>TAG_MAX) tag=TAG_MAX;
+	// interpolación lineal para cada elemento del array
 	for (int i=0;i<POSITION_LENGTH;i++) {
 		result[i]=(unsigned char)(POSITION_MIN[i]+(float)(POSITION_MAX[i]-POSITION_MIN[i])*(float)(tag-TAG_MIN)/(float)(TAG_MAX-TAG_MIN));
 	}

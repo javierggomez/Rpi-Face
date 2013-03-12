@@ -27,18 +27,31 @@
 #include "face_controller.h"
 #include "speech_synthesis.h"
 
+// Longitud máxima de una QUERY_STRING
 #define MAX_LENGTH 65536
+// Formato para añadir un carácter antes y despues de una cadena
 #define FORMAT "%c%s%c"
+// Nombre de la variable asociada al mensaje en la QUERY_STRING
 #define KEY_MESSAGE "message"
+// Nombre de la variable asociada a comandos directos en la QUERY_STRING
 #define KEY_FACE "face"
+// Nombre del fichero donde irá el mensaje
 #define FICHERO "/var/www/cgi-bin/data/fichero.raw"
+// Nombre del fichero que actuará de semáforo
 #define SEMAPHORE "/var/www/cgi-bin/data/semaphore.t3"
+// Tiempo de espera para mover la cara tras inicializarla
 #define DELAY 100000
 
+#define FILE_POSITION "/var/www/cgi-bin/data/savedata.mfc"
+// Longitud de los datos de posición (8 caracteres)
+#define POSITION_LENGTH 8
 
-
+// Programa que actúa de servidor web. Obtiene las variables de la QUERY_STRING.
+// Si hay un mensaje, lo envía a t3. Si hay un comando directo, mueve la cara.
 int main(int argc, char **argv, char **env) {
+	// Posiciones por defecto
 	const unsigned char* POSITIONS[]={FACE_HAPPY, FACE_SAD, FACE_SURPRISE, FACE_ANGRY, FACE_NEUTRAL};
+	// Mensajes asociados a las posiciones por defecto
 	const char POSITIONS_MSGS[5][256]={"/var/www/cgi-bin/messages/FACE_HAPPY.txt", "/var/www/cgi-bin/messages/FACE_SAD.txt","/var/www/cgi-bin/messages/FACE_SURPRISE.txt","/var/www/cgi-bin/messages/FACE_ANGRY.txt","/var/www/cgi-bin/messages/FACE_NEUTRAL.txt",};
 	// Iniciar la salida HTML
 	printf("Content-type:text/html\n\n");
@@ -48,10 +61,11 @@ int main(int argc, char **argv, char **env) {
 	char query[MAX_LENGTH+3]="&";
 	strncat(query, getenv("QUERY_STRING"), MAX_LENGTH);
 	int length=strlen(query);
-	char *result=(char*)malloc(length);
-	char *message=(char*)malloc(length);
+	char *result=(char*)malloc(length); // array para almacenar valores de variables
+	char *message=(char*)malloc(length); // array para almacenar el mensaje
 	result[0]=0;
 	message[0]=0;
+	// si hay algo en la QUERY_STRING
 	if (length>1) {
 		strncat(query, "&", 1);
 		if (getValue(result, query, KEY_MESSAGE)) {
@@ -60,6 +74,7 @@ int main(int argc, char **argv, char **env) {
 			strcpy(message, result);
 			
 		} else if (getValue(result, query, KEY_FACE)) {
+			// si hay comando directo, mover la cara
 			int face=atoi(result);
 			if (face>=0&&face<5) {
 				int fd=face_initialize();
@@ -67,6 +82,8 @@ int main(int argc, char **argv, char **env) {
 				face_setFace(fd, POSITIONS[face]);
 				face_close(fd);
 				say_file(POSITIONS_MSGS[face]);
+				savePosition(POSITIONS[face], FILE_POSITION);
+
 			}
 		}
 	}
@@ -77,22 +94,17 @@ int main(int argc, char **argv, char **env) {
 			"<br/><input type=\"submit\" value=\"Enviar\"/></form>", message);
 	printf("<a href='server_query.cgi?face=0' >Poner cara contenta</a><br/>");
 	printf("<a href='server_query.cgi?face=1' >Poner cara triste</a><br/>");
-	printf("<a href='server_query.cgi?face=2' >Poner cara enfadada</a><br/>");
-	printf("<a href='server_query.cgi?face=3' >Poner cara sorprendida</a><br/>");
+	printf("<a href='server_query.cgi?face=2' >Poner cara sorprendida</a><br/>");
+	printf("<a href='server_query.cgi?face=3' >Poner cara enfadada</a><br/>");
 	printf("<a href='server_query.cgi?face=4' >Poner cara neutral</a><br/>");
 
 	if ((*message)!=0) {
-		
-		fprintf(stderr, "\n");
-		printf("<p><b>Mensaje recibido: </b>%s</p>", message);
-		lowerCase(message, message);
-		writeParsed(message);
-		unsigned int length=(unsigned int)strlen(message);
-		for (unsigned int i=0;i<length;i++) {
-			fprintf(stderr, "%hhu ",message[i] );
-		}
+		// Si hubo mensaje
+		printf("<p><b>Mensaje recibido: </b>%s</p>", message); // mostrarlo
+		lowerCase(message, message); // pasar a minúsculas y quitar caracteres extraños
+		writeParsed(message); // escribirlo en el archivo de mensajes para pasárselo a t3
 		FILE *semaphore;   
-   		semaphore = fopen(SEMAPHORE, "w"); //Se crea un semáforo para que el programa principal analice el fichero
+   		semaphore = fopen(SEMAPHORE, "w"); //Se crea un semáforo para que t3 analice el fichero
 		fclose(semaphore);
 	} else {
 		printf("<p>No se recibi&oacute; ning&uacute;n mensaje</p>");
@@ -104,10 +116,11 @@ int main(int argc, char **argv, char **env) {
 }
 
 // Obtiene el valor de una variable de URL y lo almacena en result. 
-// Argumentos: result: cadena donde se almacenará el resultado; 
-// query: QUERY_STRING de la petición, precedida y seguida por
-// el carácter '&'; key, nombre de la variable a obtener. 
-// Devuelve: 1 si se encontró la variable, 0 si no. 
+// Entradas:
+// - result: cadena donde se almacenará el resultado; 
+// - query: QUERY_STRING de la petición, precedida y seguida por
+// 	        el carácter '&'; key, nombre de la variable a obtener. 
+// Valor de retorno: 1 si se encontró la variable, 0 si no. 
 int getValue(char *result, char *query, const char *key) {
 	// Buscamos el nombre de la variable precedido de '&' y seguido de '='
 	int length=strlen(key);
@@ -133,6 +146,11 @@ int getValue(char *result, char *query, const char *key) {
 // equivalente ASCII de 0xXX. result debe tener al menos el mismo
 // espacio que la longitud de value. result y value pueden ser iguales,
 // en cuyo caso el resultado se almacena sobreescribiendo value.
+// Entradas:
+// - result: array donde se almacenará el resultado
+// - value: cadena a analizar. Puede ser la misma zona de memoria
+//          que result, en cuyo caso el resultado se almacena
+//          sobreescribiendo value
 void parseValue(char *result, char *value) {
 	unsigned int hexCode; // aquí se guardaran los códigos hexadecimales
 	char *pValue=value; // puntero para recorrer value
@@ -162,31 +180,17 @@ void parseValue(char *result, char *value) {
 }
 
 // Pasa la cadena a minúsculas y elimina los caractéres especiales
+// Entradas:
+// - result: array donde se almacenará el resultado
+// - value: cadena a analizar. Puede ser la misma zona de memoria
+//          que result, en cuyo caso el resultado se almacena
+//          sobreescribiendo value
 void lowerCase(char *result, char *value) {
 	char *pValue=value; // puntero para recorrer value
 	char *pResult=result; // puntero para recorrer result
 	char *end=value+strlen(value); // dónde acabar la conversión
 	while (pValue<end) {
 		*pResult=lowerChar((unsigned char)*pValue);
-		// if(*pValue==195) {
-		// 	switch (*(++pValue)) {
-		// 		case 145:
-		// 		case 177:
-		// 			*pResult=195;
-		// 			pResult[1]=177;
-		// 			pResult+=2;
-		// 			break;
-		// 		case 129:
-		// 		case 137:
-		// 		case 141:
-		// 		case 147:
-		// 		case 154:
-		// 			*pResult=195;
-		// 			pResult[1]=(*pValue)+32;
-		// 			pResult+=2;
-		// 			break;
-		// 	}
-			
 		if((*pResult>=97 && *pResult <= 122) || (*pResult>=48 && *pResult <= 57) || (*pResult==' ') || (*pResult==225) || (*pResult==233) || (*pResult==237) || (*pResult==243) || (*pResult==250) || (*pResult==241)){//Minúsculas, números sin acentos
 			pResult++;
 		}
@@ -197,6 +201,10 @@ void lowerCase(char *result, char *value) {
 	
 }
 
+// Pasa un carácter (ISO-8859-15) a minúsculas, incluyendo 'Ñ' y letras acentuadas
+// Entradas:
+// - c: carácter a transformar
+// Valor de retorno: carácter transformado
 unsigned char lowerChar(unsigned char c) {
 	switch (c) {
 		case 193:
@@ -212,13 +220,16 @@ unsigned char lowerChar(unsigned char c) {
 	}
 } 
 
-//Escribe la cadena en un fichero
-
+// Escribe la cadena en el fichero de mensajes, sustituyendo
+// espacios por saltos de línea para que t3 los entienda.
+// Entradas:
+// -result: cadena a escribir
 void writeParsed(char *result) {
 	FILE *fichero;   
-   	fichero = fopen(FICHERO, "w");
+   	fichero = fopen(FICHERO, "w"); // abrir fichero
 	char *s;
 	char temp;
+	// Recorrer la cadena y escribir en el fichero
 	for(s = result; *s; s++){
 		temp=*s;
 		if(temp==' '){
@@ -226,8 +237,31 @@ void writeParsed(char *result) {
 		}
 		fputc(temp, fichero);		
 	}
-	fputc('\n', fichero);
+	fputc('\n', fichero); // salto de línea al final para que t3 lo entienda
 	fclose(fichero);	
+}
+
+// Guarda la posición en el fichero
+// Entradas:
+// - position: posición a guardar
+// - filename: nombre del fichero
+// Valor de retorno: 0 si hay error, 1 si no
+int savePosition(const unsigned char *position, const char *filename) {
+	FILE *file=fopen(filename, "w"); // abrir o crear archivo
+	if (file==NULL) {
+		perror("server_query: No se pudo guardar la posición: ");
+		return 0;
+	}
+	for (int i=0;i<POSITION_LENGTH;i++) {
+		// Escribir 8 números entre 0 y 255
+		if(fprintf(file, "%hhu ", position[i])<=0) {
+			perror("server_query: No se pudo guardar la posición: ");
+			fclose(file);
+			return 0;
+		}
+	} 
+	fclose(file);
+	return 1;
 }
 
 

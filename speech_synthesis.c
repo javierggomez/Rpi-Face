@@ -18,16 +18,22 @@
 #include <stdio.h>
 #include "speech_synthesis.h"
 
+// Sintetiza y reproduce en español el mensaje contenido en un archivo de texto
+// Entradas:
+// - file: nombre del archivo
 void say_file(const char *file) {
 	festival_initialize(true, 210000);
-	festival_eval_command("(voice_el_diphone)");
+	festival_eval_command("(voice_el_diphone)"); // voz en español
 	festival_say_file(file);
-	festival_wait_for_spooler();
+	festival_wait_for_spooler(); // bloquear ejecución hasta que acabe de decirlo
 }
 
+// Sintetiza y reproduce en español el mensaje pasado como argumento
+// Entradas:
+// - text: texto a sintetizar
 void say_text(const char *text) {
 	festival_initialize(true, 210000);
-	festival_eval_command("(voice_el_diphone)");
+	festival_eval_command("(voice_el_diphone)"); // voz en español
 	festival_say_text(text);
-	festival_wait_for_spooler();
+	festival_wait_for_spooler(); // bloquear ejecución hasta que acabe de decirlo
 }

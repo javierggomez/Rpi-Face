@@ -21,4 +21,5 @@ void parseValue(char *result, char *value);
 void lowerCase(char *result, char *value);
 unsigned char lowerChar(unsigned char c);
 void writeParsed(char *result);
+int savePosition(const unsigned char *position, const char *filename);
 #endif

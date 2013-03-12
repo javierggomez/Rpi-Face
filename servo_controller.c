@@ -43,12 +43,13 @@ int servo_initialize() {
 /*
 Lee datos que presumiblemente haya enviado la controladora de servos.
 Se utiliza para control de errores y para consultar posiciones de servos.
-Argumentos: fd: descriptor de archivo obtenido de 
-uart_initialize. buffer: array donde se almacenarán los
-datos leídos. nChars: número máximo de datos que se pretende
-leer. useconds: número de microsegundos que se espera para leer (para dejar
-tiempo a la controladora a que reaccione)
-Devuelve: -1 si hubo error de lectura, o el número de datos
+Entradas:
+- fd: descriptor de archivo obtenido de uart_initialize.
+- buffer: array donde se almacenarán losdatos leídos.
+- nChars: número máximo de datos que se pretende leer.
+- useconds: número de microsegundos que se espera para leer (para dejar
+            tiempo a la controladora a que reaccione)
+Valor de retorno: -1 si hubo error de lectura, o el número de datos
 leídos realmente.
 */
 int servo_read(int fd, char *buffer, int nChars, int useconds) {
@@ -59,10 +60,11 @@ int servo_read(int fd, char *buffer, int nChars, int useconds) {
 
 /*
 Mueve un servo a una posición determinada.
-Argumentos: fd: descriptor de archivo obtenido de 
-uart_initialize. servo: número de servo a mover.
-position: posición en la que se quiere poner.
-Devuelve: 1 si ha habido algún error, o 0 si todo ha
+Entradas:
+- fd: descriptor de archivo obtenido de uart_initialize.
+- servo: número de servo a mover.
+- position: posición en la que se quiere poner.
+Valor de retorno: 1 si ha habido algún error, o 0 si todo ha
 ido correctamente
 */
 int servo_setServoPosition(int fd, int servo, unsigned char position) {
@@ -70,6 +72,7 @@ int servo_setServoPosition(int fd, int servo, unsigned char position) {
 		perror("Número de servo no válido");
 		return 1;
 	}
+	// Construir el comando '>1[servo]a[posición]'
 	char command[6];
 	command[0]=HEADER;
 	command[1]=MODULE;
@@ -77,20 +80,21 @@ int servo_setServoPosition(int fd, int servo, unsigned char position) {
 	command[3]='a';
 	command[4]=position;
 	command[5]=0;
-	return uart_write(fd, command, 5);
+	return uart_write(fd, command, 5); // enviar el comando
 	
 	
 }
 
 /*
 Mueve todos los servos a posiciones determinadas.
-Argumentos: fd: descriptor de archivo obtenido de 
-uart_initialize. positions: array con las posiciones
-en la que se quieren poner.
-Devuelve: 1 si ha habido algún error, o 0 si todo ha
+Entradas:
+- fd: descriptor de archivo obtenido de uart_initialize.
+- positions: array con las posiciones en la que se quieren poner.
+Calor de retorno: 1 si ha habido algún error, o 0 si todo ha
 ido correctamente
 */
 int servo_setAllServosPositions(int fd, unsigned const char *positions) {
+	// Construir el comando '>1m[posiciones]'
 	char command[13];
 	command[0]=HEADER;
 	command[1]=MODULE;
@@ -101,15 +105,16 @@ int servo_setAllServosPositions(int fd, unsigned const char *positions) {
 	}
 	command[12]=0;
 
-	return uart_write(fd, command, 12);
+	return uart_write(fd, command, 12); // enviar el comando
 	
 }
 
 /*
 Apaga un servo.
-Argumentos: fd: descriptor de archivo obtenido de 
-uart_initialize. servo: número de servo a mover.
-Devuelve: 1 si ha habido algún error, o 0 si todo ha
+Entradas:
+- fd: descriptor de archivo obtenido de uart_initialize.
+- servo: número de servo a mover.
+Valor de retorno: 1 si ha habido algún error, o 0 si todo ha
 ido correctamente
 */
 int servo_turnOff(int fd, int servo){
@@ -118,19 +123,21 @@ int servo_turnOff(int fd, int servo){
 
 /*
 Pone la posición actual del servo como home.
-Argumentos: fd: descriptor de archivo obtenido de 
-uart_initialize. servo: número de servo.
-Devuelve: 1 si ha habido algún error, o 0 si todo ha
+Entradas: 
+- fd: descriptor de archivo obtenido de uart_initialize.
+- servo: número de servo.
+Valor de retorno: 1 si ha habido algún error, o 0 si todo ha
 ido correctamente
 */
 int servo_setAsHome(int fd, int servo){
+	// Construir el comando '>1[servo]c'
 	char command[5];
 	command[0]=HEADER;
 	command[1]=MODULE;
 	command[2]=servo+48;
 	command[3]='c';
 	command[4]=0;
-	int w = uart_write(fd, command, 4);
+	int w = uart_write(fd, command, 4); // Enviar comando
 	if (w ==-1) return 1;
 	char response=0;
 	if (servo_read(fd, &response, 1, ACK_TIMEOUT)==1&&response==ACK) {
@@ -142,19 +149,21 @@ int servo_setAsHome(int fd, int servo){
 
 /*
 Mueve un servo a su posición home.
-Argumentos: fd: descriptor de archivo obtenido de 
-uart_initialize. servo: número de servo.
-Devuelve: 1 si ha habido algún error, o 0 si todo ha
+Entradas: 
+- fd: descriptor de archivo obtenido de uart_initialize.
+- servo: número de servo.
+Valor de retorno: 1 si ha habido algún error, o 0 si todo ha
 ido correctamente
 */
 int servo_goToHome(int fd, int servo){
+	// Construir el comando '>1[servo]h'
 	char command[5];
 	command[0]=HEADER;
 	command[1]=MODULE;
 	command[2]=servo+48;
 	command[3]='h';
 	command[4]=0;
-	int w = uart_write(fd, command, 4);
+	int w = uart_write(fd, command, 4); // Enviar comando
 	if (w ==-1) return 1;
 	char response=0;
 	if (servo_read(fd, &response, 1, ACK_TIMEOUT)==1&&response==ACK) {
@@ -166,10 +175,11 @@ int servo_goToHome(int fd, int servo){
 
 /*
 Fija la resolución de un servo en standard o extended.
-Argumentos: fd: descriptor de archivo obtenido de 
-uart_initialize. servo: número de servo.
-resolution:resolución deseada.
-Devuelve: 1 si ha habido algún error, o 0 si todo ha
+Entradas:
+- fd: descriptor de archivo obtenido de uart_initialize.
+- servo: número de servo.
+- resolution:resolución deseada.
+Valor de retorno: 1 si ha habido algún error, o 0 si todo ha
 ido correctamente
 */
 int servo_setWidthResolution(int fd, int servo, char resolution){
@@ -177,6 +187,7 @@ int servo_setWidthResolution(int fd, int servo, char resolution){
 		perror("Resolución inválida");
 		return 1;
 	}
+	// Construir el comando '>1[servo]w[resolución]'
 	char command[6];
 	command[0]=HEADER;
 	command[1]=MODULE;
@@ -184,7 +195,7 @@ int servo_setWidthResolution(int fd, int servo, char resolution){
 	command[3]='w';	
 	command[4]=resolution;
 	command[5]=0;
-	int w = uart_write(fd, command, 5);
+	int w = uart_write(fd, command, 5); // Enviar comando
 	if (w ==-1) return 1;
 	char response=0;
 	if (servo_read(fd, &response, 1, ACK_TIMEOUT)==1&&response==ACK) {
@@ -196,10 +207,10 @@ int servo_setWidthResolution(int fd, int servo, char resolution){
 
 /*
 Consulta a la controladora la posición actual de un servo.
-Argumentos: fd: descriptor de archivo obtenido de 
+Entradas: fd: descriptor de archivo obtenido de 
 uart_initialize. servo: número de servo.
 error: flag que indica si todo ha ido bien o ha habido errores
-Devuelve: 0 si ha habido algún error, o la posición si todo ha
+Valor de retorno: 0 si ha habido algún error, o la posición si todo ha
 ido correctamente
 */
 unsigned char servo_getPosition(int fd, int servo, int *error){
@@ -223,10 +234,10 @@ unsigned char servo_getPosition(int fd, int servo, int *error){
 
 /*
 Consulta a la controladora de servos la torque de un servo.
-Argumentos: fd: descriptor de archivo obtenido de 
+Entradas: fd: descriptor de archivo obtenido de 
 uart_initialize. servo: número de servo.
 error: flag que indica si todo ha ido bien o ha habido errores
-Devuelve: 0 si ha habido algún error, o la torque si todo ha
+Valor de retorno: 0 si ha habido algún error, o la torque si todo ha
 ido correctamente
 */
 int servo_getTorque(int fd, int servo, int *error){
@@ -249,9 +260,9 @@ int servo_getTorque(int fd, int servo, int *error){
 
 /*
 Configura la tasa de símbolo tanto en la controladora como en la Rapsberri
-Argumentos: fd: descriptor de archivo obtenido de 
+Entradas: fd: descriptor de archivo obtenido de 
 uart_initialize. rate: tasa de símbolo.
-Devuelve: 1 si ha habido algún error, o 0 si todo ha
+Valor de retorno: 1 si ha habido algún error, o 0 si todo ha
 ido correctamente
 */
 int servo_setBaudRate(int fd, int rate){
