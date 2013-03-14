@@ -1,13 +1,38 @@
-<html><body><h1>Enviar mensaje</h1>
-<form action="cgi-bin/server_query.cgi" method="GET">
-<textarea name="message" cols=40 rows=2></textarea><br/>
-<input type="submit" value="Enviar"/>
-
-</form>
-<a href='cgi-bin/server_query.cgi?face=0' >Poner cara contenta</a><br/>
-<a href='cgi-bin/server_query.cgi?face=1' >Poner cara triste</a><br/>
-<a href='cgi-bin/server_query.cgi?face=2' >Poner cara enfadada</a><br/>
-<a href='cgi-bin/server_query.cgi?face=3' >Poner cara sorprendida</a><br/>
-<a href='cgi-bin/server_query.cgi?face=4' >Poner cara neutral</a><br/>
-</body></html>
-
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset='utf-8' />
+    <title>Rpi-face</title>
+    <link rel='STYLESHEET' type='text/css' href='/style/style.css'></link> 
+</head>
+<body>
+	<div class='center'>
+		<h1>Bienvenido a Rpi-face</h1>
+		<div class='text'>
+			Bienvenido a Rpi-face.
+			Desde aquí podrás interactuar con el sistema.
+			Por un lado dispones de la sección enviar mensajes, desde la cual le podrás enviar un mensaje al robot
+			Por otro lado podrás moverle la cara a la posición deseada.
+		</div>
+		<h1>Enviar mensaje</h1>
+		<div id='form'>
+			<span class='text'>Texto a enviar: </span>
+			<form action='/cgi-bin/server_query.cgi' method='GET'>
+				<textarea name='message' cols=40 rows=2><%r1%></textarea><br/>
+				<input class='input' type='submit' value='Enviar'/>
+			</form>
+		</div>
+		<h1>Mover cara</h1>
+		<div id="actions">
+			<ul class='menu'>
+				<li><a href='/cgi-bin/server_query.cgi?face=0' >Cara contenta</a></li>
+				<li><a href='/cgi-bin/server_query.cgi?face=1' >Cara triste</a></li>
+				<li><a href='/cgi-bin/server_query.cgi?face=2' >Cara enfadada</a></li>
+				<li><a href='/cgi-bin/server_query.cgi?face=3' >Cara sorprendida</a></li>
+				<li><a href='/cgi-bin/server_query.cgi?face=4' >Cara neutral</a></li>
+			</ul>
+		</div>
+		<p class="center"><%r2%></p>
+	</div>
+</body>
+</html>

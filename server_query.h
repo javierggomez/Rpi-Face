@@ -22,4 +22,6 @@ void lowerCase(char *result, char *value);
 unsigned char lowerChar(unsigned char c);
 void writeParsed(char *result);
 int savePosition(const unsigned char *position, const char *filename);
+void render(const char *filename, ...);
+char *string_replace(const char *string, const char *replace, const char *with);
 #endif

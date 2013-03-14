@@ -22,6 +22,7 @@
 #include <string.h>
 #include <ctype.h>
 #include <unistd.h>
+#include <stdarg.h>
 
 #include "server_query.h"
 #include "face_controller.h"
@@ -36,15 +37,17 @@
 // Nombre de la variable asociada a comandos directos en la QUERY_STRING
 #define KEY_FACE "face"
 // Nombre del fichero donde irá el mensaje
-#define FICHERO "/var/www/cgi-bin/data/fichero.raw"
+#define FICHERO "data/fichero.raw"
 // Nombre del fichero que actuará de semáforo
-#define SEMAPHORE "/var/www/cgi-bin/data/semaphore.t3"
+#define SEMAPHORE "data/semaphore.t3"
 // Tiempo de espera para mover la cara tras inicializarla
 #define DELAY 100000
 
-#define FILE_POSITION "/var/www/cgi-bin/data/savedata.mfc"
+#define FILE_POSITION "data/savedata.mfc"
 // Longitud de los datos de posición (8 caracteres)
 #define POSITION_LENGTH 8
+
+#define FILE_INDEX "/var/www/index.html"
 
 // Programa que actúa de servidor web. Obtiene las variables de la QUERY_STRING.
 // Si hay un mensaje, lo envía a t3. Si hay un comando directo, mueve la cara.
@@ -52,11 +55,17 @@ int main(int argc, char **argv, char **env) {
 	// Posiciones por defecto
 	const unsigned char* POSITIONS[]={FACE_HAPPY, FACE_SAD, FACE_SURPRISE, FACE_ANGRY, FACE_NEUTRAL};
 	// Mensajes asociados a las posiciones por defecto
-	const char POSITIONS_MSGS[5][256]={"/var/www/cgi-bin/messages/FACE_HAPPY.txt", "/var/www/cgi-bin/messages/FACE_SAD.txt","/var/www/cgi-bin/messages/FACE_SURPRISE.txt","/var/www/cgi-bin/messages/FACE_ANGRY.txt","/var/www/cgi-bin/messages/FACE_NEUTRAL.txt",};
+	const char POSITIONS_MSGS[5][256]={"messages/FACE_HAPPY.txt", "messages/FACE_SAD.txt","messages/FACE_SURPRISE.txt","messages/FACE_ANGRY.txt","messages/FACE_NEUTRAL.txt",};
 	// Iniciar la salida HTML
 	printf("Content-type:text/html\n\n");
-	printf("<html><head><title>Enviar mensaje</title></head><body>");
+	// printf("<!Doctype html>\n\n");
+	// printf("<html><head><meta charset='utf-8' /><title>Rpi-face</title><link rel='STYLESHEET' type='text/css' href='/style/style.css'></link></head><body>");
 	
+	
+	// printf("<div class='center'><h1>Bienvenido a Rpi-face</h1><div class='text'>");
+	// printf("Bienvenido a Rpi-face. Desde aquí podrás interactuar con el sistema. Por un lado dispones de la sección enviar mensajes, desde la cual le podrás enviar un mensaje al robot, y por otro lado podrás moverle la cara a la posición deseada");
+	// printf("</div>");
+
 	// Obtenemos QUERY_STRING y añadimos ''&' al principio y al final
 	char query[MAX_LENGTH+3]="&";
 	strncat(query, getenv("QUERY_STRING"), MAX_LENGTH);
@@ -88,28 +97,33 @@ int main(int argc, char **argv, char **env) {
 		}
 	}
 	// Volver a mostrar el formulario
-	printf("<h1>Enviar mensaje</h1>"
-			"<form action=\"server_query.cgi\" method=\"GET\">"
-			"<textarea name=\"message\" cols=40 rows=2>%s</textarea>"
-			"<br/><input type=\"submit\" value=\"Enviar\"/></form>", message);
-	printf("<a href='server_query.cgi?face=0' >Poner cara contenta</a><br/>");
-	printf("<a href='server_query.cgi?face=1' >Poner cara triste</a><br/>");
-	printf("<a href='server_query.cgi?face=2' >Poner cara sorprendida</a><br/>");
-	printf("<a href='server_query.cgi?face=3' >Poner cara enfadada</a><br/>");
-	printf("<a href='server_query.cgi?face=4' >Poner cara neutral</a><br/>");
+	// printf("<h1>Enviar mensaje</h1><div id='form'><span class='ext'>Texto a enviar: </span>"
+	// 		"<form action=\"/cgi-bin/server_query.cgi\" method=\"GET\">"
+	// 		"<textarea name=\"message\" cols=40 rows=2>%s</textarea>"
+	// 		"<br/><input class='input' type=\"submit\" value=\"Enviar\"/></form>", message);
+	// printf("<h1>Mover cara</h1><div id='actions'><ul class='menu'></li>");
+	// printf("<li><a href='/cgi-bin/server_query.cgi?face=0' >Poner cara contenta</a><br/></li>");
+	// printf("<li><a href='/cgi-bin/server_query.cgi?face=1' >Poner cara triste</a><br/></li>");
+	// printf("<li><a href='/cgi-bin/server_query.cgi?face=2' >Poner cara sorprendida</a><br/></li>");
+	// printf("<li><a href='/cgi-bin/server_query.cgi?face=3' >Poner cara enfadada</a><br/></li>");
+	// printf("<li><a href='/cgi-bin/server_query.cgi?face=4' >Poner cara neutral</a><br/></li></ul></div>");
 
 	if ((*message)!=0) {
 		// Si hubo mensaje
-		printf("<p><b>Mensaje recibido: </b>%s</p>", message); // mostrarlo
+		char *footer=(char*)malloc(length+25);
+		sprintf(footer, "<b>Mensaje recibido: </b>%s", message); // mostrarlo
+		render(FILE_INDEX, message, footer, NULL);
 		lowerCase(message, message); // pasar a minúsculas y quitar caracteres extraños
 		writeParsed(message); // escribirlo en el archivo de mensajes para pasárselo a t3
 		FILE *semaphore;   
    		semaphore = fopen(SEMAPHORE, "w"); //Se crea un semáforo para que t3 analice el fichero
 		fclose(semaphore);
+		free(footer);
 	} else {
-		printf("<p>No se recibi&oacute; ning&uacute;n mensaje</p>");
+		// printf("<p>No se recibi&oacute; ning&uacute;n mensaje</p>");
+		render(FILE_INDEX, "", "No se recibió ningún mensaje", NULL);
 	}
-	printf("</body></html>");
+	// printf("</div></body></html>");
 	free(result);
 	free(message);
 	return 0;
@@ -264,4 +278,55 @@ int savePosition(const unsigned char *position, const char *filename) {
 	return 1;
 }
 
+void render(const char *filename, ...) {
+	FILE *file=fopen(filename, "r");
+	char contents[65536];
+	char *pContents=(char*)contents;
+	int c;
+	while ((c=fgetc(file))!=EOF) {
+		*(pContents++)=(char)c;
+	}
+	*pContents=0;
+	pContents=(char*)contents;
+	fclose(file);
+	if (strlen(contents)==0) return;
+	va_list ap;
+	va_start(ap, filename);
+	const char *arg;
+	int i=1;
+	char replace[16];
+	while ((arg=va_arg(ap, const char*))!=NULL) {
+		sprintf(replace, "<%%r%d%%>", i);
+		pContents=string_replace(pContents, replace, arg);
+		i++;
+	}
+	va_end(ap);
+	printf("%s\n", pContents);
+	fprintf(stderr, "%s\n", pContents);
+}
 
+char *string_replace(const char *string, const char *replace, const char *with) {
+	int sLength=strlen(string);
+	int rLength=strlen(replace);
+	int wLength=strlen(with);
+	int count=0;
+	const char *sPointer=string;
+	const char *temp=string;
+	while ((sPointer=strstr(sPointer, replace))!=NULL) {
+		sPointer+=rLength;
+		count++;
+	}
+	int nLength=sLength+(wLength-rLength)*count;
+	char *result=(char*)malloc(nLength+1);
+	char *pResult=result;
+	sPointer=string;
+	while ((temp=strstr(sPointer, replace))!=NULL) {
+		strncpy(pResult, sPointer, temp-sPointer);
+		pResult+=(temp-sPointer);
+		strcpy(pResult, with);
+		pResult+=wLength;
+		sPointer=temp+rLength;
+	}
+	strcpy(pResult, sPointer);
+	return result;
+}
