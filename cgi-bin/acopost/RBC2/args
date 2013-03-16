@@ -1,0 +1,1 @@
+../acopost-1.8.6/bin/t3 FINALEMO.123 FINALEMO.lex < ./test4.raw 

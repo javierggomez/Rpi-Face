@@ -1,0 +1,35 @@
+#!/bin/bash
+# Direccion raiz de lso binarios de ACOPOST
+DIR_ACO_BIN=../acopost/acopost-1.8.6/bin
+
+T4=$DIR_ACO_BIN/t4
+
+#Definición de variables.
+I=0
+S=0
+
+#Identificador de usuario pasado como parametro.
+MESSAGEID=$1
+#Nombre del fichero en el que se encuentra el mensaje de texto. 
+MESSAGEFILE=$2
+
+#Fichero en los que se encuentran los trigramas.
+NGRAM_LAN="IDIOMA.123"
+
+#Fichero en el que se encuentra el diccionario con las notas correspondientes a cada palabra.
+LEX_LAN="IDIOMA.lex"
+
+#Comando que limpia el mensaje de puntos, comas, exclamaciones, etc... Para así hacer mas      facil "su" comprension y evitar malentendidos por parte del sistema.
+
+cat $MESSAGEFILE | sed "s/[ ][ ]*/\\n/g" | sed 's/[!)(?\.\,]//g' | awk '/^[a-z]/ || /^[A-Z]/{print}' > test2.$MESSAGEID.raw
+
+#Llamada al programa T4 de la libreria ACOPOST que realiza el etiquetado.
+
+ $T4 $NGRAM_LAN $LEX_LAN < test2.$MESSAGEID.raw > comentario.$MESSAGEID.t4
+ 
+#Dado que los resultados se muestran a modo de una etiqueta por palabra, este comando lo que hace es acumular y comparar el numero de veces que sale cada etiqueta.
+awk '{ if($2=="E") ++E; else ++S} END {if(E>S) print "E"; else print "S" }'  comentario.$MESSAGEID.t4 > idioma.$MESSAGEID
+
+#Borramos el archivo que te devuelve el etiquetador ya que una vez comparadas las etiquetas es innecesario.
+
+rm comentario.$MESSAGEID.t4

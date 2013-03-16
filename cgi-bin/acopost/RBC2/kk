@@ -1,0 +1,33 @@
+[        0 ms::1] 
+[        0 ms::1] Trigram POS Tagger (c) Ingo Schr�der, schroeder@informatik.uni-hamburg.de
+[        0 ms::1] 
+[       12 ms::1] model generated from 2 sentences (thereof 1 one-word)
+[       12 ms::1] found 6 uni-, 8 bi-, and 9 trigram counts for the boundary tag
+[       12 ms::1] computed smoothed transition probabilities
+[       12 ms::1] built suffix tries with 0 lowercase and 132 uppercase nodes
+[       12 ms::1] leaves/single/total LC: 1 0 1
+[       12 ms::1] leaves/single/total UC: 21 103 133
+[       12 ms::1] suffix probabilities smoothing done [theta 3.191e-01]
+[       12 ms::1] done
+----> __$
+----> 9
+----> ???
+----> 1
+No 9
+me __$
+gustó __$
+nada __$
+tu __$
+actitud __$
+el __$
+otro __$
+día __$
+. __$
+Estoy 9
+muy __$
+enfadado __$
+contigo __$
+. __$
+Te 9
+odio __$
+. __$

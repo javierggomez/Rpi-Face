@@ -1,0 +1,48 @@
+			h1{
+    			font-size: 38px;
+				font-style: italic;
+				color: #333;
+				padding: 10px;
+				margin: 10px;
+				text-shadow: -1px -1px 0px #101010, 1px 1px 0px #505050;
+    		}
+    		 body {
+    			background: #484850;
+    			align: center;
+  			}
+  			ul.menu{   
+  				border: 1px solid #7C7C7C;
+				border-bottom: none;  
+				list-style: none;
+				margin: 0;
+				padding: 0;
+				width: 130px;
+
+				}
+			ul.menu li {
+				background: #F4F4F4;
+				border-bottom: 1px solid #7C7C7C;
+				border-top: 1px solid #FFF;
+				}
+			ul.menu li a {
+				color: #333;
+				display: block;
+				padding: .2em 0 .2em .5em;
+				text-decoration: none;
+			}
+			.input {     border: 1px solid #006; }
+			div{
+				margin:15px;
+				padding: 15px;
+			}
+			.text{
+				color: #AFAFAF;
+				width: 391px;
+				text-align: justify;
+			}
+			.center{
+				width: 391px;
+				padding-left: 50%;
+				margin-left: -196px;
+
+			}
