@@ -111,6 +111,7 @@ void processMessage(char *message) {
 	// sprintf(footer, "<b>Mensaje recibido: </b>%s", message); // mostrarlo
 	// render(FILE_INDEX, message, footer, NULL); // recargar el formulario
 	lowerCase(message, message); // pasar a minúsculas y quitar caracteres extraños
+	if (strlen(message)==0) return;
 	writeParsed(message); // escribirlo en el archivo de mensajes para pasárselo a t3
 	FILE *semaphore;   
 	semaphore = fopen(SEMAPHORE, "w"); //Se crea un semáforo para que t3 analice el fichero
