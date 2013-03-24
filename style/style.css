@@ -2,22 +2,22 @@
     			font-size: 38px;
 				font-style: italic;
 				color: #333;
-				padding: 10px;
-				margin: 10px;
+				padding: 5px;
+				margin: 5px;
 				text-shadow: -1px -1px 0px #101010, 1px 1px 0px #505050;
     		}
     		 body {
     			background: #484850;
-    			align: center;
+    			text-align: center;
   			}
   			ul.menu{   
   				border: 1px solid #7C7C7C;
 				border-bottom: none;  
 				list-style: none;
-				margin: 0;
-				padding: 0;
 				width: 130px;
-
+				margin-left: auto;
+				margin-right: auto;
+				padding: 0;
 				}
 			ul.menu li {
 				background: #F4F4F4;
@@ -45,4 +45,28 @@
 				padding-left: 50%;
 				margin-left: -196px;
 
+			}
+			#message {
+				width: 90%;
+			}
+			#form {
+				height: 10em;
+			}
+			#in_form {
+				width: 90%;
+				float: left;
+			}
+			#record {
+				width: 9%;
+				height: 3em;
+				float: right;
+			}
+			#record>img {
+				max-width: 100%;
+				max-height: 100%;
+				width: auto;
+				height: auto;
+			}
+			.clear {
+				clear: both;
 			}

@@ -54,7 +54,7 @@
 // Mensaje cuando el cambio es pequeño
 #define FILE_NOCHANGE "messages/TEXT_NOCHANGE.txt"
 // Tolerancia de cambio de estado
-#define MOOD_TOLERANCE 8
+#define MOOD_TOLERANCE 16
 
 // Programa para calcular la nueva posición de la cara a partir de la antigua 
 // (guardada en el archivo POSITION_FILE) y la valoración del último mensaje
