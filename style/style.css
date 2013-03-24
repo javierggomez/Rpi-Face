@@ -32,18 +32,18 @@
 			}
 			.input {     border: 1px solid #006; }
 			div{
-				margin:15px;
-				padding: 15px;
+				margin:10px;
+				padding: 10px;
 			}
 			.text{
 				color: #AFAFAF;
-				width: 391px;
+				width: 100%;
 				text-align: justify;
 			}
 			.center{
-				width: 391px;
-				padding-left: 50%;
-				margin-left: -196px;
+				width: 420px;
+				margin-left: auto;
+				margin-right: auto;
 
 			}
 			#message {

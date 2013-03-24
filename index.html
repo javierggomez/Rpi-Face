@@ -13,15 +13,15 @@
 	<div class='center'>
 		<h1>Bienvenido a Rpi-face</h1>
 		<div class='text'>
-			Bienvenido a Rpi-face.
+			<p>Bienvenido a Rpi-face.
 			Desde aquí podrás interactuar con el sistema.
 			Por un lado dispones de la sección enviar mensajes, desde la cual le podrás enviar un mensaje al robot.
-			Por otro lado podrás moverle la cara a la posición deseada.
+			Por otro lado podrás moverle la cara a la posición deseada.</p>
 		</div>
 		<h1>Enviar mensaje</h1>
 		<div id='form'>
 			<span class='text'>Texto a enviar: </span>
-			<form id='in_form' action='/cgi-bin/server_query.cgi' method='GET'>
+			<form id='in_form' action='/cgi-bin/server_query.cgi' method='POST'>
 				<textarea id='message' name='message' rows=3 placeholder="Escribe un mensaje"><%r1%></textarea><br/>
 				<input class='input' type='submit' value='Enviar'/>
 			</form>

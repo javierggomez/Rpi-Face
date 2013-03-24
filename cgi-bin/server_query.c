@@ -30,8 +30,6 @@
 
 // Longitud máxima de una QUERY_STRING
 #define MAX_LENGTH 65536
-// Formato para añadir un carácter antes y despues de una cadena
-#define FORMAT "%c%s%c"
 // Nombre de la variable asociada al mensaje en la QUERY_STRING
 #define KEY_MESSAGE "message"
 // Nombre de la variable asociada a comandos directos en la QUERY_STRING
@@ -52,87 +50,108 @@
 // Programa que actúa de servidor web. Obtiene las variables de la QUERY_STRING.
 // Si hay un mensaje, lo envía a t3. Si hay un comando directo, mueve la cara.
 int main(int argc, char **argv, char **env) {
+	
+	int rendered=0;
+	// Obtener método
+	if (!strcmp(getenv("REQUEST_METHOD"), "GET")) {
+		// Obtenemos QUERY_STRING y añadimos '&' al principio y al final
+		char query[MAX_LENGTH+3]="&";
+		strncat(query, getenv("QUERY_STRING"), MAX_LENGTH);
+		int length=strlen(query);
+		char *result=(char*)malloc(length); // array para almacenar valores de variables
+		if (length>1) {
+			strncat(query, "&", 1);
+			if (getValue(result, query, KEY_FACE)) {
+				// si hay comando directo, mover la cara
+				int face=atoi(result);
+				redirect("/", ""); // redirigir a la página principal
+				setFace(face);
+				rendered=1;
+			} else if (getValue(result, query, KEY_MESSAGE)) {
+				renderMessage(result); // mostrar mensaje en los campos
+				rendered=1;
+			}
+		}
+		free(result);
+	} else if (!strcmp(getenv("REQUEST_METHOD"), "POST")) {
+		// Obtenemos QUERY_STRING y añadimos '&' al principio y al final
+		int length=1+atoi(getenv("CONTENT_LENGTH"));
+		char *query=(char*)malloc(length+3);
+		sprintf(query, "&");
+		fgets(query+1, length, stdin);
+		char *result=(char*)malloc(length); // array para almacenar valores de variables
+		// si hay algo en la QUERY_STRING
+		if (length>1) {
+			strncat(query, "&", 1);
+			if (getValue(result, query, KEY_MESSAGE)) {
+				// si hay mensaje, procesarlo
+				processMessage(result);
+				query[strlen(query)-1]=0;
+				// redirigir con GET para que no se reenvíe al recargar la página
+				redirect("/", query+1);
+				rendered=1;
+			}
+		}
+		free(result);
+		free(query);
+	} 
+	if (!rendered) {
+		render(FILE_INDEX, "", "No se recibió ningún mensaje", NULL);
+	}
+	return 0;
+}
+
+// Procesa el mensaje: lo reproduce y mueve la cara
+// Entradas: 
+// - message: mensaje recibido.
+void processMessage(char *message) {
+	parseValue(message, message);
+	// int length=strlen(message);
+	// char *footer=(char*)malloc(length+25);
+	// sprintf(footer, "<b>Mensaje recibido: </b>%s", message); // mostrarlo
+	// render(FILE_INDEX, message, footer, NULL); // recargar el formulario
+	lowerCase(message, message); // pasar a minúsculas y quitar caracteres extraños
+	writeParsed(message); // escribirlo en el archivo de mensajes para pasárselo a t3
+	FILE *semaphore;   
+	semaphore = fopen(SEMAPHORE, "w"); //Se crea un semáforo para que t3 analice el fichero
+	fclose(semaphore);
+}
+
+// Muestra la página con los campos rellenos con el mensaje
+// Entradas:
+// - message: mensaje a mostrar
+void renderMessage(char *message) {
+	parseValue(message, message); // decodificar caracteres especiales
+	int length=strlen(message);
+	char *footer=(char*)malloc(length+25);
+	sprintf(footer, "<b>Mensaje recibido: </b>%s", message); // mostrarlo
+	render(FILE_INDEX, message, footer, NULL); // recargar el formulario
+	free(footer);
+}
+
+// Mueve la cara a una posición determinada
+// Entradas:
+// - face: indice de la posición en {FACE_HAPPY, FACE_SAD, FACE_SURPRISE, FACE_ANGRY, FACE_NEUTRAL}
+void setFace(int face) {
 	// Posiciones por defecto
 	const unsigned char* POSITIONS[]={FACE_HAPPY, FACE_SAD, FACE_SURPRISE, FACE_ANGRY, FACE_NEUTRAL};
 	// Mensajes asociados a las posiciones por defecto
 	const char POSITIONS_MSGS[5][256]={"messages/FACE_HAPPY.txt", "messages/FACE_SAD.txt","messages/FACE_SURPRISE.txt","messages/FACE_ANGRY.txt","messages/FACE_NEUTRAL.txt",};
-	// Iniciar la salida HTML
-	printf("Content-type:text/html\n\n");
-	// printf("<!Doctype html>\n\n");
-	// printf("<html><head><meta charset='utf-8' /><title>Rpi-face</title><link rel='STYLESHEET' type='text/css' href='/style/style.css'></link></head><body>");
-	
-	
-	// printf("<div class='center'><h1>Bienvenido a Rpi-face</h1><div class='text'>");
-	// printf("Bienvenido a Rpi-face. Desde aquí podrás interactuar con el sistema. Por un lado dispones de la sección enviar mensajes, desde la cual le podrás enviar un mensaje al robot, y por otro lado podrás moverle la cara a la posición deseada");
-	// printf("</div>");
-
-	// Obtenemos QUERY_STRING y añadimos ''&' al principio y al final
-	char query[MAX_LENGTH+3]="&";
-	strncat(query, getenv("QUERY_STRING"), MAX_LENGTH);
-	int length=strlen(query);
-	char *result=(char*)malloc(length); // array para almacenar valores de variables
-	char *message=(char*)malloc(length); // array para almacenar el mensaje
-	result[0]=0;
-	message[0]=0;
-	// si hay algo en la QUERY_STRING
-	if (length>1) {
-		strncat(query, "&", 1);
-		if (getValue(result, query, KEY_MESSAGE)) {
-			// si la variable message existe, sustituir caracteres
-			parseValue(result, result);
-			strcpy(message, result);
-			
-		} else if (getValue(result, query, KEY_FACE)) {
-			// si hay comando directo, mover la cara
-			int face=atoi(result);
-			if (face>=0&&face<5) {
-				int fd=face_initialize();
-				usleep(DELAY);
-				face_setFace(fd, POSITIONS[face]);
-				face_close(fd);
-				speech_initialize();
-				say_file(POSITIONS_MSGS[face]);
-				speech_close();
-				savePosition(POSITIONS[face], FILE_POSITION);
-
-			}
-		}
+	if (face>=0&&face<5) {
+		int fd=face_initialize();
+		usleep(DELAY);
+		face_setFace(fd, POSITIONS[face]);
+		face_close(fd);
+		speech_initialize();
+		say_file(POSITIONS_MSGS[face]);
+		speech_close();
+		savePosition(POSITIONS[face], FILE_POSITION);
 	}
-	// printf("<h1>Enviar mensaje</h1><div id='form'><span class='ext'>Texto a enviar: </span>"
-	// 		"<form action=\"/cgi-bin/server_query.cgi\" method=\"GET\">"
-	// 		"<textarea name=\"message\" cols=40 rows=2>%s</textarea>"
-	// 		"<br/><input class='input' type=\"submit\" value=\"Enviar\"/></form>", message);
-	// printf("<h1>Mover cara</h1><div id='actions'><ul class='menu'></li>");
-	// printf("<li><a href='/cgi-bin/server_query.cgi?face=0' >Poner cara contenta</a><br/></li>");
-	// printf("<li><a href='/cgi-bin/server_query.cgi?face=1' >Poner cara triste</a><br/></li>");
-	// printf("<li><a href='/cgi-bin/server_query.cgi?face=2' >Poner cara sorprendida</a><br/></li>");
-	// printf("<li><a href='/cgi-bin/server_query.cgi?face=3' >Poner cara enfadada</a><br/></li>");
-	// printf("<li><a href='/cgi-bin/server_query.cgi?face=4' >Poner cara neutral</a><br/></li></ul></div>");
-
-	if ((*message)!=0) {
-		// Si hubo mensaje
-		char *footer=(char*)malloc(length+25);
-		sprintf(footer, "<b>Mensaje recibido: </b>%s", message); // mostrarlo
-		render(FILE_INDEX, message, footer, NULL); // recargar el formulario
-		lowerCase(message, message); // pasar a minúsculas y quitar caracteres extraños
-		writeParsed(message); // escribirlo en el archivo de mensajes para pasárselo a t3
-		FILE *semaphore;   
-   		semaphore = fopen(SEMAPHORE, "w"); //Se crea un semáforo para que t3 analice el fichero
-		fclose(semaphore);
-		free(footer);
-	} else {
-		// printf("<p>No se recibi&oacute; ning&uacute;n mensaje</p>");
-		render(FILE_INDEX, "", "No se recibió ningún mensaje", NULL); // recargar el formulario
-	}
-	// printf("</div></body></html>");
-	free(result);
-	free(message);
-	return 0;
 }
 
-// Obtiene el valor de una variable de URL y lo almacena en result. 
+// Obtiene el valor de una variable de URL y lo almacena en message. 
 // Entradas:
-// - result: cadena donde se almacenará el resultado; 
+// - message: cadena donde se almacenará el resultado; 
 // - query: QUERY_STRING de la petición, precedida y seguida por
 // 	        el carácter '&'; key, nombre de la variable a obtener. 
 // Valor de retorno: 1 si se encontró la variable, 0 si no. 
@@ -286,6 +305,8 @@ int savePosition(const unsigned char *position, const char *filename) {
 //	-siguientes argumentos (opcionales): cadena de caracteres que sustituiran a <%ri%>. El último argumento
 //	será NULL para indicar que se acaba la lista de argumentos.
 void render(const char *filename, ...) {
+	// Iniciar la salida HTML
+	printf("Content-type:text/html\n\n");
 	// Leer fichero y guardarlo en contents
 	FILE *file=fopen(filename, "r");
 	char contents[65536];
@@ -312,6 +333,19 @@ void render(const char *filename, ...) {
 	}
 	va_end(ap);
 	printf("%s\n", pContents);
+}
+
+// Redirige al navegador a otra página.
+// Entradas:
+// - url: URL de la página (absoluta, relativa o relativa a la raíz del servidor)
+// - query: QUERY_STRING a enviar con la URL.
+void redirect(const char *url, const char *query) {
+	printf("Status: 303 See Other\n");
+	if (*query==0) {
+		printf("Location: %s\n\n", url);
+	} else {
+		printf("Location: %s%c%s\n\n", url, '?', query);
+	}
 }
 
 //Reemplaza en el contenido de la cadena string todas las coincidencias de replace con el 
