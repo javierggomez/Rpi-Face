@@ -1,40 +1,47 @@
-alert("Start0");
 $(document).ready(function() {
-	alert("Start");
 	var recognition=null;
+  var recognizing=false;
 	if (!('webkitSpeechRecognition' in window)) {
-		alert("Error");
-		$('#record>img').attr('title', 'La funciÃ³n de reconocimiento de voz solo es soportada por Chrome 25 o superior.');
+    $('#message').prop('placeholder', 'Escribe un mensaje');
+		$('#record>img').prop('title', 'La función de reconocimiento de voz solo es soportada por Chrome 25 o superior.');
+    //$('#record').prop('disabled', true);
+    $('#record>img').prop('src', '/img/img_microphone_disabled.ico');
 	} else {
-		alert("Correct");
-		$('#message').attr('placeholder', 'Escribe un mensaje o pincha en el micrÃ³fono y habla');
+		$('#message').prop('placeholder', 'Escribe un mensaje o pincha en el micrófono y habla');
  		recognition = new webkitSpeechRecognition();
- 		alert("Created recognition");
  		recognition.lang='es-ES';
-		//recognition.onstart = function() {
-		//}
+		recognition.onstart = function() {
+      recognizing=true;
+      $('#message').val('');
+      $('#message').prop('placeholder', 'Habla ahora');
+		}
   		recognition.onresult = function(event) {
-  			alert("Received result");
   			var message='';
   			for (var i=event.resultIndex;i<event.results.length;i++) {
   				message+=event.results[i][0].transcript;
   			}
   			$('#message').val(message);
   		};
-  		recognition.onerror = function(event) { 
+  		recognition.onerror = function(event) {
+        recognizing=false;
+        $('#message').prop('placeholder', 'Escribe un mensaje o pincha en el micrófono y habla');
+        $('#message').val(''); 
   			alert('Error: '+event.error);
   		 };
-  		//recognition.onend = function() { 
-  		//}
+  		recognition.onend = function() { 
+        recognizing=false;
+        $('#message').prop('placeholder', 'Escribe un mensaje o pincha en el micrófono y habla');
+  		}
   	}
   	$('#record').on('click', function() {
-  		alert("Recognition start");
   		if (recognition==null) {
-  			alert('La funciÃ³n de reconocimiento de voz solo es soportada por Chrome 25 o superior.');
+  			alert('La función de reconocimiento de voz solo es soportada por Chrome 25 o superior.');
   			return;
   		}
-  		$('#message').val('');
-  		$('#message').attr('placeholder', 'Habla ahora');
-  		recognition.start();
+      if (!recognizing) {
+        recognition.start();
+      } else {
+        recognition.stop();
+      }
   	});
 });
