@@ -21,7 +21,7 @@
 		<h1>Enviar mensaje</h1>
 		<div id='form'>
 			<span class='text'>Texto a enviar: </span>
-			<form id='in_form' action='/cgi-bin/server_query.cgi' method='POST'>
+			<form id='in_form' action='/' method='POST'>
 				<textarea id='message' name='message' rows=3 placeholder="Escribe un mensaje"><%r1%></textarea><br/>
 				<input class='input' type='submit' value='Enviar'/>
 			</form>
@@ -33,11 +33,11 @@
 		<h1>Mover cara</h1>
 		<div id="actions">
 			<ul class='menu'>
-				<li><a href='/cgi-bin/server_query.cgi?face=0' >Cara contenta</a></li>
-				<li><a href='/cgi-bin/server_query.cgi?face=1' >Cara triste</a></li>
-				<li><a href='/cgi-bin/server_query.cgi?face=2' >Cara sorprendida</a></li>
-				<li><a href='/cgi-bin/server_query.cgi?face=3' >Cara enfadada</a></li>
-				<li><a href='/cgi-bin/server_query.cgi?face=4' >Cara neutral</a></li>
+				<li><a href='/?face=0' >Cara contenta</a></li>
+				<li><a href='/?face=1' >Cara triste</a></li>
+				<li><a href='/?face=2' >Cara sorprendida</a></li>
+				<li><a href='/?face=3' >Cara enfadada</a></li>
+				<li><a href='/?face=4' >Cara neutral</a></li>
 			</ul>
 		</div>
 		<p class="center"><%r2%></p>
