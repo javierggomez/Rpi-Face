@@ -1,0 +1,21 @@
+<resources>
+
+    <string name="app_name">RpiFace</string>
+    <string name="menu_settings">Configuración</string>
+    <string name="title_activity_menu">Rpi-face</string>
+    <string name="speak">Hablar</string>
+    <string name="move">Mover</string>
+    <string name="vote">Votar</string>
+    <string name="happy">Contento</string>
+    <string name="sad">Triste</string>
+    <string name="angry">Enfadado</string>
+    <string name="surprised">Sorprendido</string>
+    <string name="neutral">Neutral</string>
+    <string name="yes">Si</string>
+    <string name="no">No</string>
+    <string name="voice">Voz</string>
+    <string name="text">Texto</string>
+    <string name="record">Grabar</string>
+    <string name="send">Enviar</string>
+
+</resources>
