@@ -126,7 +126,7 @@ void renderMessage(char *message) {
 	int length=strlen(message);
 	char *footer=(char*)malloc(length+25);
 	sprintf(footer, "<b>Mensaje recibido: </b>%s", message); // mostrarlo
-	render(FILE_INDEX, message, footer, NULL); // recargar el formulario
+	render(FILE_INDEX, message, footer, (const char*)NULL); // recargar el formulario
 	free(footer);
 }
 
@@ -326,7 +326,7 @@ void render(const char *filename, ...) {
 	const char *arg;
 	int i=1;
 	char replace[16];
-	while ((arg=va_arg(ap, const char*))!=NULL) {
+	while ( ( arg=va_arg(ap, const char* ) )!=NULL) {
 		sprintf(replace, "<%%r%d%%>", i);
 		// reemplazar "<%ri%>" con el argumento i
 		pContents=string_replace(pContents, replace, arg);
