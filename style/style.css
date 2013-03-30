@@ -41,10 +41,17 @@
 				text-align: justify;
 			}
 			.center{
-				width: 420px;
-				margin-left: auto;
-				margin-right: auto;
-
+				width: 60%;
+				margin-left: 18%;
+				float: left;
+			}
+			.right {
+				width: 12%;
+				float:right;
+				margin-top: 60px;
+			}
+			.centered {
+				text-align: center;
 			}
 			#message {
 				width: 90%;

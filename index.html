@@ -7,6 +7,7 @@
 
     <script type='text/javascript' src='http://ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js'></script>
     <script type='text/javascript' src='/script/speech_recognition.js'></script>
+    <script type='text/javascript' src='/script/vote.js'></script>
  
 </head>
 <body>
@@ -40,7 +41,17 @@
 				<li><a href='/?face=4' >Cara neutral</a></li>
 			</ul>
 		</div>
-		<p class="center"><%r2%></p>
+		<p class="centered"><%r2%></p>
 	</div>
+	<div class='right'>
+		<form id='vote_form' action='/' method='POST'>
+			<p class='centered'><b>Vota esta página</b></p>
+			<input type='hidden' id='vote_hidden' name='vote' value='0'/>
+			<input id='vote_plus' type='button' value='<%r3%>'/>
+			<input id='vote_minus' type='button' value='<%r4%>'/>
+		</form>
+
+	</div>
+	<div class='clear'/>
 </body>
 </html>

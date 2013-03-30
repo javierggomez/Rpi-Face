@@ -18,23 +18,20 @@
 CC=g++
 CFLAGS=-Wall
 FESTIVAL_FLAGS=-I/usr/include/festival -I/usr/lib/speech_tools/include -Lfestival/src/lib -leststring -lestools -lestbase -lFestival
-EXECUTABLES=server_query.cgi move_face face_controller_test servo_controller_test servo_controllerTest rpi_uart_test
+EXECUTABLES=server_query.cgi vote_manager move_face face_controller_test servo_controller_test servo_controllerTest rpi_uart_test
 
 default: server_query.cgi move_face
 
 all: $(EXECUTABLES) 
 
-set_face.cgi: set_face.o face_controller.o servo_controller.o rpi_uart.o
-	$(CC) $(CFLAGS) -o set_happy.cgi set_face.o face_controller.o servo_controller.o rpi_uart.o
-
-server_query.cgi: server_query.o speech_synthesis.o face_controller.o servo_controller.o rpi_uart.o
-	$(CC) $(CFLAGS) -o server_query.cgi server_query.o speech_synthesis.o face_controller.o servo_controller.o rpi_uart.o $(FESTIVAL_FLAGS)
+server_query.cgi: server_query.o vote_process.o vote_handler.o speech_synthesis.o face_controller.o servo_controller.o rpi_uart.o
+	$(CC) $(CFLAGS) -o server_query.cgi server_query.o vote_process.o vote_handler.o speech_synthesis.o face_controller.o servo_controller.o rpi_uart.o $(FESTIVAL_FLAGS)
 
 move_face: move_face.o speech_synthesis.o face_controller.o servo_controller.o rpi_uart.o
 	$(CC) -o move_face move_face.o speech_synthesis.o face_controller.o servo_controller.o rpi_uart.o $(FESTIVAL_FLAGS)
 
-move_face.o: move_face.c Makefile
-	$(CC) -o move_face.o -c move_face.c
+vote_process.o: vote_process.c vote_process.h vote_handler.o speech_synthesis.o face_controller.o
+	$(CC) $(CFLAGS) -c -o vote_process.o vote_process.c $(FESTIVAL_FLAGS)
 
 speech_synthesis.o: speech_synthesis.c speech_synthesis.h
 	$(CC) -c speech_synthesis.c $(FESTIVAL_FLAGS) -o speech_synthesis.o
@@ -50,6 +47,9 @@ servo_controllerTest: servo_controllerTest.o servo_controller.o rpi_uart.o
 
 rpi_uart_test: rpi_uart_test.o rpi_uart.o
 	$(CC) $(CFLAGS) -o rpi_uart_test rpi_uart_test.o rpi_uart.o
+
+vote_manager: vote_manager.o vote_handler.o
+	$(CC) $(CFLAGS) -o vote_manager vote_manager.o vote_handler.o
 
 .PHONY = clean 
 clean: 

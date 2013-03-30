@@ -16,6 +16,7 @@
 
 #ifndef SERVER_QUERY
 #define SERVER_QUERY
+void getVoteStrings(char *stringPlus, char *stringMinus);
 void processMessage(char *message);
 void renderMessage(char *message);
 void setFace(int face);
