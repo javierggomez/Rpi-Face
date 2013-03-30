@@ -14,19 +14,14 @@
 //    You should have received a copy of the GNU General Public License
 //    along with Rpi-Face.  If not, see <http://www.gnu.org/licenses/>.
 
-#ifndef SERVER_QUERY
-#define SERVER_QUERY
-void getVoteStrings(char *stringPlus, char *stringMinus);
-void processMessage(char *message);
-void renderMessage(char *message);
-void setFace(int face);
-int getValue(char *result, char *query, const char *key);
-void parseValue(char *result, char *value);
-void lowerCase(char *result, char *value);
-unsigned char lowerChar(unsigned char c);
-void writeParsed(char *result);
-int savePosition(const unsigned char *position, const char *filename);
-void render(const char *filename, ...);
-void redirect(const char *url, const char *query);
-char *string_replace(const char *string, const char *replace, const char *with);
-#endif
+// Envía el voto al servidor usando el método POST.
+$(document).ready(function() {
+	$('#vote_plus').on('click', function() {
+		$('#vote_hidden').val('1'); // valor del voto como parámetro oculto
+		$('#vote_form').submit(); // enviar formulario
+	});
+	$('#vote_minus').on('click', function() {
+		$('#vote_hidden').val('0'); // valor del voto como parámetro oculto
+		$('#vote_form').submit(); // enviar formulario
+	});
+});

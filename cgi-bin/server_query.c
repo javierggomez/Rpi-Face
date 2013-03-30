@@ -27,6 +27,8 @@
 #include "server_query.h"
 #include "face_controller.h"
 #include "speech_synthesis.h"
+#include "vote_process.h"
+#include "vote_handler.h"
 
 // Longitud máxima de una QUERY_STRING
 #define MAX_LENGTH 65536
@@ -34,6 +36,8 @@
 #define KEY_MESSAGE "message"
 // Nombre de la variable asociada a comandos directos en la QUERY_STRING
 #define KEY_FACE "face"
+// Nombre de la variable asociada a votos en la QUERY_STRING
+#define KEY_VOTE "vote"
 // Nombre del fichero donde irá el mensaje
 #define FICHERO "data/fichero.raw"
 // Nombre del fichero que actuará de semáforo
@@ -44,7 +48,7 @@
 #define FILE_POSITION "data/savedata.mfc"
 // Longitud de los datos de posición (8 caracteres)
 #define POSITION_LENGTH 8
-
+// Archivo HTML de la página principal
 #define FILE_INDEX "/var/www/index.html"
 
 // Programa que actúa de servidor web. Obtiene las variables de la QUERY_STRING.
@@ -90,17 +94,40 @@ int main(int argc, char **argv, char **env) {
 				// redirigir con GET para que no se reenvíe al recargar la página
 				redirect("/", query+1);
 				rendered=1;
+			} else if (getValue(result, query, KEY_VOTE)) {
+				// si hay voto, procesarlo
+				int vote=atoi(result);
+				processVote(vote);
+				// redirigir con GET
+				redirect("/", "");
+				rendered=1;
 			}
 		}
 		free(result);
 		free(query);
 	} 
 	if (!rendered) {
-		render(FILE_INDEX, "", "No se recibió ningún mensaje", NULL);
+		char stringPlus[64];
+		char stringMinus[64];
+		getVoteStrings(stringPlus, stringMinus);
+		render(FILE_INDEX, "", "No se recibió ningún mensaje", stringPlus, stringMinus, NULL);
 	}
 	return 0;
 }
 
+// Obtiene cadenas de texto para mostrar el recuento de votos en los botones
+// de la página web.
+// Entradas:
+// - stringPlus: cadena donde se almacenará el texto correspondiente al
+// botón de voto positivo
+// - stringMinus: cadena donde se almacenará el texto correspondiente al
+// botón de voto negativo
+void getVoteStrings(char *stringPlus, char *stringMinus) {
+	VoteCount *count=getVoteCount();
+	sprintf(stringPlus, "+ (%d)", count->plus);
+	sprintf(stringMinus, "- (%d)", count->minus);
+	free(count);
+}
 // Procesa el mensaje: lo reproduce y mueve la cara
 // Entradas: 
 // - message: mensaje recibido.
@@ -124,9 +151,12 @@ void processMessage(char *message) {
 void renderMessage(char *message) {
 	parseValue(message, message); // decodificar caracteres especiales
 	int length=strlen(message);
-	char *footer=(char*)malloc(length+25);
+	char *footer=(char*)malloc(length+28);
 	sprintf(footer, "<b>Mensaje recibido: </b>%s", message); // mostrarlo
-	render(FILE_INDEX, message, footer, (const char*)NULL); // recargar el formulario
+	char stringPlus[64];
+	char stringMinus[64];
+	getVoteStrings(stringPlus, stringMinus);
+	render(FILE_INDEX, message, footer, stringPlus, stringMinus, (const char*)NULL); // recargar el formulario
 	free(footer);
 }
 
