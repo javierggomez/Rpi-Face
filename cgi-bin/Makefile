@@ -18,14 +18,17 @@
 CC=g++
 CFLAGS=-Wall
 FESTIVAL_FLAGS=-I/usr/include/festival -I/usr/lib/speech_tools/include -Lfestival/src/lib -leststring -lestools -lestbase -lFestival
-EXECUTABLES=server_query.cgi vote_manager move_face face_controller_test servo_controller_test servo_controllerTest rpi_uart_test
+EXECUTABLES=server_query.cgi action_manager vote_manager move_face face_controller_test servo_controller_test servo_controllerTest rpi_uart_test
 
-default: server_query.cgi move_face
+default: server_query.cgi action_manager vote_manager
 
 all: $(EXECUTABLES) 
 
-server_query.cgi: server_query.o vote_process.o vote_handler.o speech_synthesis.o face_controller.o servo_controller.o rpi_uart.o
-	$(CC) $(CFLAGS) -o server_query.cgi server_query.o vote_process.o vote_handler.o speech_synthesis.o face_controller.o servo_controller.o rpi_uart.o $(FESTIVAL_FLAGS)
+server_query.cgi: server_query.o vote_handler.o 
+	$(CC) $(CFLAGS) -o server_query.cgi server_query.o  vote_handler.o 
+
+action_manager: action_manager.o speech_synthesis.o position.o face_controller.o servo_controller.o rpi_uart.o
+	$(CC) $(CFLAGS) -o action_manager action_manager.o speech_synthesis.o position.o face_controller.o servo_controller.o rpi_uart.o $(FESTIVAL_FLAGS)
 
 move_face: move_face.o speech_synthesis.o face_controller.o servo_controller.o rpi_uart.o
 	$(CC) -o move_face move_face.o speech_synthesis.o face_controller.o servo_controller.o rpi_uart.o $(FESTIVAL_FLAGS)

@@ -25,9 +25,6 @@
 #include <stdarg.h>
 
 #include "server_query.h"
-#include "face_controller.h"
-#include "speech_synthesis.h"
-#include "vote_process.h"
 #include "vote_handler.h"
 
 // Longitud máxima de una QUERY_STRING
@@ -38,6 +35,10 @@
 #define KEY_FACE "face"
 // Nombre de la variable asociada a votos en la QUERY_STRING
 #define KEY_VOTE "vote"
+// Nombre de la variable asociada a preguntas directas en la QUERY_STRING
+#define KEY_QUERY "query"
+// Valor de la variable KEY_QUERY asociado al recuento de votos en la QUERY_STRING
+#define VALUE_VOTECOUNT "votecount"
 // Nombre del fichero donde irá el mensaje
 #define FICHERO "data/fichero.raw"
 // Nombre del fichero que actuará de semáforo
@@ -48,8 +49,23 @@
 #define FILE_POSITION "data/savedata.mfc"
 // Longitud de los datos de posición (8 caracteres)
 #define POSITION_LENGTH 8
+#define POSITION_MIN FACE_SAD
+#define POSITION_MAX FACE_HAPPY
 // Archivo HTML de la página principal
 #define FILE_INDEX "/var/www/index.html"
+#define FILE_COMMAND "data/command.am"
+#define FILE_SEMAPHORE "data/semaphore.am"
+#define FILE_PLUS "messages/vote_plus.txt"
+#define FILE_MINUS "messages/vote_minus.txt"
+
+const unsigned char FACE_HAPPY[8]= {127,0, 0, 0, 127, 127, 240,240};
+const unsigned char FACE_SAD[8]= {127,0, 0, 0, 30, 210, 10,10};
+const unsigned char FACE_SURPRISE[8]= {200,0, 0, 0, 20, 170, 127,127};
+const unsigned char FACE_ANGRY[8]= {80,0, 0,0, 215, 30, 127,127};
+const unsigned char FACE_NEUTRAL[8]= {127,0, 0,0, 127, 127, 127,127};
+const unsigned char *POSITIONS[5]={FACE_HAPPY, FACE_SAD, FACE_SURPRISE, FACE_ANGRY, FACE_NEUTRAL};
+// Mensajes asociados a las posiciones por defecto
+const char POSITIONS_MSGS[5][256]={"messages/FACE_HAPPY.txt", "messages/FACE_SAD.txt","messages/FACE_SURPRISE.txt","messages/FACE_ANGRY.txt","messages/FACE_NEUTRAL.txt"};
 
 // Programa que actúa de servidor web. Obtiene las variables de la QUERY_STRING.
 // Si hay un mensaje, lo envía a t3. Si hay un comando directo, mueve la cara.
@@ -69,11 +85,16 @@ int main(int argc, char **argv, char **env) {
 				// si hay comando directo, mover la cara
 				int face=atoi(result);
 				redirect("/", ""); // redirigir a la página principal
-				setFace(face);
+				commandPosition(FILE_COMMAND, FILE_SEMAPHORE, face);
 				rendered=1;
 			} else if (getValue(result, query, KEY_MESSAGE)) {
 				renderMessage(result); // mostrar mensaje en los campos
 				rendered=1;
+			} else if (getValue(result, query, KEY_QUERY)) {
+				if (!strcmp(result, VALUE_VOTECOUNT)) {
+					sendVoteCount();
+					rendered=1;
+				}
 			}
 		}
 		free(result);
@@ -97,7 +118,7 @@ int main(int argc, char **argv, char **env) {
 			} else if (getValue(result, query, KEY_VOTE)) {
 				// si hay voto, procesarlo
 				int vote=atoi(result);
-				processVote(vote);
+				commandVote(FILE_COMMAND, FILE_SEMAPHORE, vote);
 				// redirigir con GET
 				redirect("/", "");
 				rendered=1;
@@ -115,6 +136,11 @@ int main(int argc, char **argv, char **env) {
 	return 0;
 }
 
+void sendVoteCount() {
+	VoteCount *count=getVoteCount();
+	printf("Content-type:text/plain\n\n");
+	printf("%d\n%d\n", count->plus, count->minus);
+}
 // Obtiene cadenas de texto para mostrar el recuento de votos en los botones
 // de la página web.
 // Entradas:
@@ -139,10 +165,7 @@ void processMessage(char *message) {
 	// render(FILE_INDEX, message, footer, NULL); // recargar el formulario
 	lowerCase(message, message); // pasar a minúsculas y quitar caracteres extraños
 	if (strlen(message)==0) return;
-	writeParsed(message); // escribirlo en el archivo de mensajes para pasárselo a t3
-	FILE *semaphore;   
-	semaphore = fopen(SEMAPHORE, "w"); //Se crea un semáforo para que t3 analice el fichero
-	fclose(semaphore);
+	commandMessage(FILE_COMMAND, FILE_SEMAPHORE, message);
 }
 
 // Muestra la página con los campos rellenos con el mensaje
@@ -158,26 +181,6 @@ void renderMessage(char *message) {
 	getVoteStrings(stringPlus, stringMinus);
 	render(FILE_INDEX, message, footer, stringPlus, stringMinus, (const char*)NULL); // recargar el formulario
 	free(footer);
-}
-
-// Mueve la cara a una posición determinada
-// Entradas:
-// - face: indice de la posición en {FACE_HAPPY, FACE_SAD, FACE_SURPRISE, FACE_ANGRY, FACE_NEUTRAL}
-void setFace(int face) {
-	// Posiciones por defecto
-	const unsigned char* POSITIONS[]={FACE_HAPPY, FACE_SAD, FACE_SURPRISE, FACE_ANGRY, FACE_NEUTRAL};
-	// Mensajes asociados a las posiciones por defecto
-	const char POSITIONS_MSGS[5][256]={"messages/FACE_HAPPY.txt", "messages/FACE_SAD.txt","messages/FACE_SURPRISE.txt","messages/FACE_ANGRY.txt","messages/FACE_NEUTRAL.txt",};
-	if (face>=0&&face<5) {
-		int fd=face_initialize();
-		usleep(DELAY);
-		face_setFace(fd, POSITIONS[face]);
-		face_close(fd);
-		speech_initialize();
-		say_file(POSITIONS_MSGS[face]);
-		speech_close();
-		savePosition(POSITIONS[face], FILE_POSITION);
-	}
 }
 
 // Obtiene el valor de una variable de URL y lo almacena en message. 
@@ -418,4 +421,117 @@ char *string_replace(const char *string, const char *replace, const char *with) 
 	}
 	strcpy(pResult, sPointer); // copiar lo que queda tras la última ocurrencia
 	return result;
+}
+
+int writeToFile(const char *filename, const char *string) {
+	FILE *file=fopen(filename, "w");
+	if (file==NULL) return 0;
+	const char *pString=string;
+	while ((*pString)) {
+		fputc(*(pString++), file);
+	}
+	fclose(file);
+	return 1;
+}
+
+int commandPosition(const char *filename, const char *semaphore, int face) {
+	if (face<0||face>4) return 0;
+	const unsigned char *position=POSITIONS[face];
+	while (!access(semaphore, F_OK)) usleep(DELAY);
+	FILE *file=fopen(filename, "w"); // abrir o crear archivo
+	if (file==NULL) {
+		perror("server_query: No se pudo guardar la posición: ");
+		return 0;
+	}
+	fprintf(file, "<position>");
+	for (int i=0;i<POSITION_LENGTH;i++) {
+		// Escribir 8 números entre 0 y 255
+		if(fprintf(file, "%hhu ", position[i])<=0) {
+			perror("server_query: No se pudo guardar la posición: ");
+			fclose(file);
+			return 0;
+		}
+	} 
+	fprintf(file, "</position>\n<speech>");
+	fprintf(file, "%s</speech>\n", POSITIONS_MSGS[face]);
+	fclose(file);
+	sendCommand(semaphore);
+	return 1;
+}
+
+int commandMessage(const char *filename, const char *semaphore, const char *message) {
+	while (!access(semaphore, F_OK)) usleep(DELAY);
+	FILE *file=fopen(filename, "w");
+	if (file==NULL) return 0;
+	fprintf(file, "<message>%s</message>\n", message);
+	fclose(file);
+	sendCommand(semaphore);
+	return 1;
+}
+
+int commandVote(const char *filename, const char *semaphore, int vote) {
+	addVote(vote); // añadir voto al recuento
+	// Mover cara a posición correspondiente al voto
+	while (!access(semaphore, F_OK)) usleep(DELAY);
+	const unsigned char *position=vote?FACE_HAPPY:FACE_SAD;
+	FILE *file=fopen(filename, "w"); // abrir o crear archivo
+	if (file==NULL) {
+		perror("server_query: No se pudo guardar la posición: ");
+		return 0;
+	}
+	fprintf(file, "<position>");
+	for (int i=0;i<POSITION_LENGTH;i++) {
+		// Escribir 8 números entre 0 y 255
+		if(fprintf(file, "%hhu ", position[i])<=0) {
+			perror("server_query: No se pudo guardar la posición: ");
+			fclose(file);
+			return 0;
+		}
+	} 
+	fprintf(file, "</position>\n<speech>");
+	fprintf(file, "%s</speech>\n", vote?FILE_PLUS:FILE_MINUS);
+	fclose(file);
+	sendCommand(semaphore);
+	// Mover a posición correspondiente al recuento de votos
+	VoteCount *count=getVoteCount();
+	unsigned char votePosition[POSITION_LENGTH];
+	calculateVotePosition(votePosition, count->plus, count->minus);
+	while (!access(semaphore, F_OK)) usleep(DELAY);
+	file=fopen(filename, "w"); // abrir o crear archivo
+	if (file==NULL) {
+		perror("server_query: No se pudo guardar la posición: ");
+		return 0;
+	}
+	fprintf(file, "<position>");
+	for (int i=0;i<POSITION_LENGTH;i++) {
+		// Escribir 8 números entre 0 y 255
+		if(fprintf(file, "%hhu ", votePosition[i])<=0) {
+			perror("server_query: No se pudo guardar la posición: ");
+			fclose(file);
+			return 0;
+		}
+	} 
+	fprintf(file, "</position>\n");
+	fclose(file);
+	sendCommand(semaphore);
+	return 1;
+}
+
+// Calcula la posición correspondiente al recuento de votos, utilizando
+// una interpolación lineal entre POSITION_MIN y POSITION_MAX
+// Entradas:
+// - result: array donde se devolverá el resultado
+// - plus: número de votos positivos
+// - minus: número de votos negativos
+void calculateVotePosition(unsigned char *result, int plus, int minus) {
+	float ratio=(plus+minus)?((float)plus/(float)(plus+minus)):0.5;
+	// interpolación lineal para cada elemento del array
+	for (int i=0;i<POSITION_LENGTH;i++) {
+		result[i]=(unsigned char)(POSITION_MIN[i]+(float)(POSITION_MAX[i]-POSITION_MIN[i])*ratio);
+	}
+}
+
+void sendCommand(const char *semaphore) {
+	FILE *f=fopen(semaphore, "w");
+	fclose(f);
 }

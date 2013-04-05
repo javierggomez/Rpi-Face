@@ -1,0 +1,73 @@
+#!/bin/bash
+
+#    Copyright (C) 2013 Javier García, Julio Alberto González
+
+#    This file is part of Rpi-Face.
+#    Rpi-Face is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+
+#    Rpi-Face is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+
+#    You should have received a copy of the GNU General Public License
+#    along with Rpi-Face.  If not, see <http://www.gnu.org/licenses/>.
+
+PORT_OK=31416
+PORT_KO=27183
+EMO_OK=lm/emo_ok.lm
+EMO_KO=lm/emo_ko.lm
+
+hlp() {
+	echo "rpi-face-server: Servidor para el proyecto Rpi-Face."
+	echo
+	echo "Inicia los servidores de probabilidad y el servidor de acciones, que se encarga de controlar los movimientos de la cara y la reproducción de mensajes."
+	echo
+	echo "Opciones:"
+	echo "-o port_ok: Cambia el puerto del servidor de probabilidad de mensajes positivos (por defecto, 31416)."
+	echo "-k port_ko: Cambia el puerto del servidor de probabilidad de mensajes negativos (por defecto, 27183)."
+	echo "-p emo_ok: Selecciona el modelo de lenguaje utilizado por el servidor de mensajes positivos (por defecto, lm/emo_ok.lm)."
+	echo "-n emo_ko: Selecciona el modelo de lenguaje utilizado por el servidor de mensajes negativos (por defecto, lm/emo_ko.lm)."
+	echo "-x: Cierra cualquier otra instancia del programa que se esté ejecutando y sale."
+	echo "-h: Muestra esta ayuda."
+}
+
+while getopts :ho:k:p:n:x option
+do
+	case "$option" in
+		h) hlp
+			exit 0
+			;;
+		o) if (test $OPTARG -gt -1 2>/dev/null) && (test $OPTARG -lt 65536 2>/dev/null); then
+				PORT_OK=$OPTARG  # Puerto del servidor positivo
+			else
+				echo "rpi-face-server: error: El argumento de -n debe ser un número entre 0 y 65535." >&2
+				exit 1 
+			fi;;
+		k) if (test $OPTARG -gt -1 2>/dev/null) && (test $OPTARG -lt 65536 2>/dev/null); then
+				PORT_KO=$OPTARG  # Puerto del servidor negativo
+			else
+				echo "rpi-face-server: error: El argumento de -n debe ser un número entre 0 y 65535." >&2
+				exit 1 
+			fi;;
+		p) EMO_OK=$OPTARG;;
+		n) EMO_KO=$OPTARG;;
+		x) killall -SIGINT ngram;
+			killall rpi-face-server;
+			exit 0;;
+		*) echo "rpi-face-server: error: Opción incorrecta." >&2
+			exit 1;;  # Opción incorrecta
+	esac
+done
+shift `expr $OPTIND - 1`  # Eliminación de opciones
+if [ `pgrep -c ^rpi-face-server$` -gt 1 ]; then
+	echo "rpi-face-server: error: El programa ya se está ejecutando. Cierre la otra instancia del programa o ejecute rpi-face-server con la opción -x para forzar su cierre." >&2;
+	exit 1;
+fi;
+ngram -lm "$EMO_OK" -server-port "$PORT_OK" > /dev/null 2> /dev/null &
+ngram -lm "$EMO_KO" -server-port "$PORT_KO" > /dev/null 2> /dev/null &
+./action_manager -o "$PORT_OK" -k "$PORT_KO"
+killall -SIGINT ngram

@@ -16,10 +16,10 @@
 
 #ifndef SERVER_QUERY
 #define SERVER_QUERY
+void sendVoteCount();
 void getVoteStrings(char *stringPlus, char *stringMinus);
 void processMessage(char *message);
 void renderMessage(char *message);
-void setFace(int face);
 int getValue(char *result, char *query, const char *key);
 void parseValue(char *result, char *value);
 void lowerCase(char *result, char *value);
@@ -29,4 +29,10 @@ int savePosition(const unsigned char *position, const char *filename);
 void render(const char *filename, ...);
 void redirect(const char *url, const char *query);
 char *string_replace(const char *string, const char *replace, const char *with);
+int writeToFile(const char *filename, const char *string);
+int commandPosition(const char *filename, const char *semaphore, int face);
+int commandMessage(const char *filename, const char *semaphore, const char *message);
+int commandVote(const char *filename, const char *semaphore, int vote);
+void calculateVotePosition(unsigned char *result, int plus, int minus);
+void sendCommand(const char *semaphore);
 #endif

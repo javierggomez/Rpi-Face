@@ -16,6 +16,7 @@
 
 // Código para controlar la cara.
 #include <unistd.h>
+#include <stdio.h>
 
 #include "face_controller.h"
 #include "servo_controller.h"
@@ -77,6 +78,8 @@ Argumentos: fd: descriptor de archivo obtenido de uart_initialize.
 Devuelve: 1 si ha habido algún error, y 0 si todo ha ido bien.
 */
 int face_setFace(int fd, unsigned const char *positions){
+	for (int i=0;i<8;i++) fprintf(stderr, "%hhu ", positions[i]);
+	fprintf(stderr, "\n");
 	return servo_setAllServosPositions(fd, positions); 
 }
 
@@ -86,7 +89,6 @@ Argumentos: fd: descriptor de archivo obtenido de uart_initialize.
 times: número de veces a parpadear
 current: posición actual de los ojos
 Devuelve: 1 si ha habido algún error, y 0 si todo ha ido bien.
-//Hay que probar si puede mantener el ritmo el robot (incluso si no necesita el tiempo ese de espera y lo almacena en un buffer todo)
 */
 int face_blink(int fd, int times, unsigned char current){
 	for (int i=0;i<=times;i++) {
