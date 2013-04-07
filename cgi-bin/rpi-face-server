@@ -35,6 +35,7 @@ hlp() {
 	echo "-h: Muestra esta ayuda."
 }
 
+# procesar opciones
 while getopts :ho:k:p:n:x option
 do
 	case "$option" in
@@ -67,7 +68,10 @@ if [ `pgrep -c ^rpi-face-server$` -gt 1 ]; then
 	echo "rpi-face-server: error: El programa ya se está ejecutando. Cierre la otra instancia del programa o ejecute rpi-face-server con la opción -x para forzar su cierre." >&2;
 	exit 1;
 fi;
+# Iniciar servidores de probabilidad
 ngram -lm "$EMO_OK" -server-port "$PORT_OK" > /dev/null 2> /dev/null &
 ngram -lm "$EMO_KO" -server-port "$PORT_KO" > /dev/null 2> /dev/null &
+# Iniciar servidor de acciones
 ./action_manager -o "$PORT_OK" -k "$PORT_KO"
+# Cerrar servidores de probabilidad cuando se salga de action_manager
 killall -SIGINT ngram

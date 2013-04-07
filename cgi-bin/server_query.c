@@ -49,15 +49,22 @@
 #define FILE_POSITION "data/savedata.mfc"
 // Longitud de los datos de posición (8 caracteres)
 #define POSITION_LENGTH 8
+// Posición correspondiente a la valoración más negativa
 #define POSITION_MIN FACE_SAD
+// Posición correspondiente a la valoración más positiva
 #define POSITION_MAX FACE_HAPPY
 // Archivo HTML de la página principal
 #define FILE_INDEX "/var/www/index.html"
+// Archivo por donde se envían los comandos
 #define FILE_COMMAND "data/command.am"
+// Archivo que actúa de semáforo
 #define FILE_SEMAPHORE "data/semaphore.am"
+// Archivo con el mensaje correspondiente al voto positivo
 #define FILE_PLUS "messages/vote_plus.txt"
+// Archivo con el mensaje correspondiente al voto positivo
 #define FILE_MINUS "messages/vote_minus.txt"
 
+// Posiciones por defecto
 const unsigned char FACE_HAPPY[8]= {127,0, 0, 0, 127, 127, 240,240};
 const unsigned char FACE_SAD[8]= {127,0, 0, 0, 30, 210, 10,10};
 const unsigned char FACE_SURPRISE[8]= {200,0, 0, 0, 20, 170, 127,127};
@@ -67,8 +74,8 @@ const unsigned char *POSITIONS[5]={FACE_HAPPY, FACE_SAD, FACE_SURPRISE, FACE_ANG
 // Mensajes asociados a las posiciones por defecto
 const char POSITIONS_MSGS[5][256]={"messages/FACE_HAPPY.txt", "messages/FACE_SAD.txt","messages/FACE_SURPRISE.txt","messages/FACE_ANGRY.txt","messages/FACE_NEUTRAL.txt"};
 
-// Programa que actúa de servidor web. Obtiene las variables de la QUERY_STRING.
-// Si hay un mensaje, lo envía a t3. Si hay un comando directo, mueve la cara.
+// Programa que actúa de servidor web. Obtiene las variables de la QUERY_STRING
+// y envía los comandos correspondientes a action_manager.
 int main(int argc, char **argv, char **env) {
 	
 	int rendered=0;
@@ -82,9 +89,10 @@ int main(int argc, char **argv, char **env) {
 		if (length>1) {
 			strncat(query, "&", 1);
 			if (getValue(result, query, KEY_FACE)) {
-				// si hay comando directo, mover la cara
+				// comando de posición directa
 				int face=atoi(result);
 				redirect("/", ""); // redirigir a la página principal
+				// mandar comando de mover la cara
 				commandPosition(FILE_COMMAND, FILE_SEMAPHORE, face);
 				rendered=1;
 			} else if (getValue(result, query, KEY_MESSAGE)) {
@@ -92,7 +100,7 @@ int main(int argc, char **argv, char **env) {
 				rendered=1;
 			} else if (getValue(result, query, KEY_QUERY)) {
 				if (!strcmp(result, VALUE_VOTECOUNT)) {
-					sendVoteCount();
+					sendVoteCount(); // mandar recuento de votos
 					rendered=1;
 				}
 			}
@@ -128,6 +136,7 @@ int main(int argc, char **argv, char **env) {
 		free(query);
 	} 
 	if (!rendered) {
+		// si todavía no se ha mostrado la página, mostrarla sin mensaje
 		char stringPlus[64];
 		char stringMinus[64];
 		getVoteStrings(stringPlus, stringMinus);
@@ -136,10 +145,13 @@ int main(int argc, char **argv, char **env) {
 	return 0;
 }
 
+// Envía el recuento de votos en texto plano. Para ser usado en
+// aplicaciones, no desde un navegador.
 void sendVoteCount() {
 	VoteCount *count=getVoteCount();
 	printf("Content-type:text/plain\n\n");
 	printf("%d\n%d\n", count->plus, count->minus);
+	free(count);
 }
 // Obtiene cadenas de texto para mostrar el recuento de votos en los botones
 // de la página web.
@@ -159,10 +171,6 @@ void getVoteStrings(char *stringPlus, char *stringMinus) {
 // - message: mensaje recibido.
 void processMessage(char *message) {
 	parseValue(message, message);
-	// int length=strlen(message);
-	// char *footer=(char*)malloc(length+25);
-	// sprintf(footer, "<b>Mensaje recibido: </b>%s", message); // mostrarlo
-	// render(FILE_INDEX, message, footer, NULL); // recargar el formulario
 	lowerCase(message, message); // pasar a minúsculas y quitar caracteres extraños
 	if (strlen(message)==0) return;
 	commandMessage(FILE_COMMAND, FILE_SEMAPHORE, message);
@@ -359,14 +367,18 @@ void render(const char *filename, ...) {
 	const char *arg;
 	int i=1;
 	char replace[16];
+	char *temp;
 	while ( ( arg=va_arg(ap, const char* ) )!=NULL) {
 		sprintf(replace, "<%%r%d%%>", i);
 		// reemplazar "<%ri%>" con el argumento i
-		pContents=string_replace(pContents, replace, arg);
+		temp=string_replace(pContents, replace, arg);
+		if (i>=2) free(pContents);
+		pContents=temp;
 		i++;
 	}
 	va_end(ap);
 	printf("%s\n", pContents);
+	free(pContents);
 }
 
 // Redirige al navegador a otra página.
@@ -422,98 +434,132 @@ char *string_replace(const char *string, const char *replace, const char *with) 
 	strcpy(pResult, sPointer); // copiar lo que queda tras la última ocurrencia
 	return result;
 }
-
+// Escribe una cadena de texto en un archivo.
+// Entradas:
+// - filename: nombre del archivo
+// - string: cadena de texto
+// Valor de retorno: 1 si la operación tuvo éxito; 0 si no.
 int writeToFile(const char *filename, const char *string) {
+	// abrir archivo
 	FILE *file=fopen(filename, "w");
 	if (file==NULL) return 0;
 	const char *pString=string;
+	// copiar cadena
 	while ((*pString)) {
 		fputc(*(pString++), file);
 	}
+	// cerrar archivo
 	fclose(file);
 	return 1;
 }
 
+// Envía a action_manager un comando de posición directa.
+// Entradas:
+// - filename: nombre del archivo por el que enviar el comando.
+// - semaphore: archivo que actúa como semáforo.
+// - face: índice de la posición, entre 0 y 4, en 
+//    {FACE_HAPPY, FACE_SAD, FACE_SURPRISE, FACE_ANGRY, FACE_NEUTRAL}.
+// Valor de retorno: 1 si la operación tuvo éxito; 0 si no.
 int commandPosition(const char *filename, const char *semaphore, int face) {
 	if (face<0||face>4) return 0;
 	const unsigned char *position=POSITIONS[face];
+	// esperar hasta que no haya semáforo
 	while (!access(semaphore, F_OK)) usleep(DELAY);
 	FILE *file=fopen(filename, "w"); // abrir o crear archivo
 	if (file==NULL) {
-		perror("server_query: No se pudo guardar la posición: ");
+		perror("server_query: No se pudo enviar el comando: ");
 		return 0;
 	}
 	fprintf(file, "<position>");
 	for (int i=0;i<POSITION_LENGTH;i++) {
 		// Escribir 8 números entre 0 y 255
 		if(fprintf(file, "%hhu ", position[i])<=0) {
-			perror("server_query: No se pudo guardar la posición: ");
+			perror("server_query: No se pudo enviar el comando: ");
 			fclose(file);
 			return 0;
 		}
 	} 
 	fprintf(file, "</position>\n<speech>");
+	// enviar también el mensaje a reproducir
 	fprintf(file, "%s</speech>\n", POSITIONS_MSGS[face]);
 	fclose(file);
-	sendCommand(semaphore);
+	sendCommand(semaphore); // crear semáforo
 	return 1;
 }
 
+// Envía a action_manager un comando de analizar mansaje.
+// Entradas:
+// - filename: nombre del archivo por el que enviar el comando.
+// - semaphore: archivo que actúa como semáforo.
+// - message: mensaje a analizar.
+// Valor de retorno: 1 si la operación tuvo éxito; 0 si no.
 int commandMessage(const char *filename, const char *semaphore, const char *message) {
+	// esperar hasta que no haya semáforo
 	while (!access(semaphore, F_OK)) usleep(DELAY);
+	// escribir mensaje
 	FILE *file=fopen(filename, "w");
 	if (file==NULL) return 0;
 	fprintf(file, "<message>%s</message>\n", message);
 	fclose(file);
-	sendCommand(semaphore);
+	sendCommand(semaphore); // crear semáforo
 	return 1;
 }
 
+// Envía a action_manager un comando de procesar voto nuevo.
+// Entradas:
+// - filename: nombre del archivo por el que enviar el comando.
+// - semaphore: archivo que actúa como semáforo.
+// - vote: voto recibido (0 negativo, 1 positivo).
+// Valor de retorno: 1 si la operación tuvo éxito; 0 si no.
 int commandVote(const char *filename, const char *semaphore, int vote) {
 	addVote(vote); // añadir voto al recuento
-	// Mover cara a posición correspondiente al voto
+	// esperar hasta que no haya semáforo
 	while (!access(semaphore, F_OK)) usleep(DELAY);
 	const unsigned char *position=vote?FACE_HAPPY:FACE_SAD;
 	FILE *file=fopen(filename, "w"); // abrir o crear archivo
 	if (file==NULL) {
-		perror("server_query: No se pudo guardar la posición: ");
+		perror("server_query: No se pudo enviar el comando: ");
 		return 0;
 	}
+	// Escribir posición correspondiente al voto:
 	fprintf(file, "<position>");
 	for (int i=0;i<POSITION_LENGTH;i++) {
 		// Escribir 8 números entre 0 y 255
 		if(fprintf(file, "%hhu ", position[i])<=0) {
-			perror("server_query: No se pudo guardar la posición: ");
+			perror("server_query: No se pudo enviar el comando: ");
 			fclose(file);
 			return 0;
 		}
 	} 
 	fprintf(file, "</position>\n<speech>");
+	// Escribir texto a reproducir según el voto
 	fprintf(file, "%s</speech>\n", vote?FILE_PLUS:FILE_MINUS);
 	fclose(file);
-	sendCommand(semaphore);
-	// Mover a posición correspondiente al recuento de votos
+	sendCommand(semaphore); // enviar comando
+	// Obtener recuento de votos
 	VoteCount *count=getVoteCount();
 	unsigned char votePosition[POSITION_LENGTH];
+	// Nuevo comando con la posición correspondiente al recuento de votos
 	calculateVotePosition(votePosition, count->plus, count->minus);
+	free(count);
 	while (!access(semaphore, F_OK)) usleep(DELAY);
 	file=fopen(filename, "w"); // abrir o crear archivo
 	if (file==NULL) {
-		perror("server_query: No se pudo guardar la posición: ");
+		perror("server_query: No se pudo enviar el comando: ");
 		return 0;
 	}
 	fprintf(file, "<position>");
 	for (int i=0;i<POSITION_LENGTH;i++) {
 		// Escribir 8 números entre 0 y 255
 		if(fprintf(file, "%hhu ", votePosition[i])<=0) {
-			perror("server_query: No se pudo guardar la posición: ");
+			perror("server_query: No se pudo enviar el comando: ");
 			fclose(file);
 			return 0;
 		}
 	} 
 	fprintf(file, "</position>\n");
 	fclose(file);
-	sendCommand(semaphore);
+	sendCommand(semaphore); // enviar el comando
 	return 1;
 }
 
@@ -531,6 +577,9 @@ void calculateVotePosition(unsigned char *result, int plus, int minus) {
 	}
 }
 
+// Crea el semáforo para que action_manager procese el comando recibido.
+// Entradas:
+// - semaphore: archivo que actúa como semáforo.
 void sendCommand(const char *semaphore) {
 	FILE *f=fopen(semaphore, "w");
 	fclose(f);

@@ -43,6 +43,7 @@ void setPosition(const unsigned char *position) {
 	usleep(FACE_DELAY);
 	face_setFace(fd, position);
 	face_close(fd);
+	// Guradar en archivo
 	savePosition(position, POSITION_FILE);
 }
 
