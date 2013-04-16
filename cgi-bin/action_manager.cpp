@@ -19,18 +19,23 @@
 // mensajes que llegan o ejecuta los comandos que recibe (movimiento de 
 // la cabeza o reproducción de textos).
 
-#include <stdio.h>
-#include <stdlib.h>
+#include <iostream>
+#include <cstdio>
+#include <cstdlib>
 #include <unistd.h>
-#include <string.h>
-#include <math.h>
+#include <cstring>
+#include <cmath>
 #include <signal.h>
-#include <ctype.h>
+#include <cctype>
+#include <cfloat>
 
-#include "action_manager.h"
 #include "speech_synthesis.h"
 #include "face_controller.h"
 #include "position.h"
+#include "freeling_client.h"
+#include "action_manager.h"
+
+using namespace std;
 
 // Archivo en el que se recibe el comando en formato XML
 #define FILE_COMMAND "data/command.am"
@@ -62,8 +67,17 @@
 // Comando para el analizador negativo
 #define ANALYZER_KO_COMMAND "ngram -use-server %d -ppl %s"
 // Etiqueta a buscar en la respuesta del analizador
-#define ANALYZER_LABEL "ppl= "
-// Posición correspondiente a la nota máxima
+#define ANALYZER_LABEL "ppl1= "
+// Relación máxima entre la valoración positiva y la negativa para
+// mover la cabeza a su posición máxima. Debe ser un float.
+#define OK_KO_RATIO 2.0
+// Puerto del servidor de Freeling
+#define FREELING_PORT 25513
+// Puerto predeterminado del servidor positivo
+#define FILE_OK "lm/words_ok.txt"
+// Puerto predeterminado del servidor negativo
+#define FILE_KO "lm/words_ko.txt"
+// Etiqueta a buscar en la respuesta del analizador
 #define POSITION_MAX FACE_HAPPY
 // Posición correspondiente a la nota mínima
 #define POSITION_MIN FACE_SAD
@@ -75,11 +89,16 @@
 #define FILE_SADDER "messages/TEXT_SADDER.txt"
 // Mensaje cuando el cambio es pequeño
 #define FILE_NOCHANGE "messages/TEXT_NOCHANGE.txt"
+// Máxima longitud de un nombre de archivo
+#define FILENAME_LENGTH 128
+// Nombre del archivo para los mensajes a reproducir
+#define FILE_SPEECH "data/speech.am"
 
 int go_on; // variable para mantener ejecución del bucle
 int g_port_ok=PORT_OK; // puerto del servidor positivo
 int g_port_ko=PORT_KO; // puerto del servidor negativo
-void INThandler(int sig);
+int g_freeling_port=FREELING_PORT; // puerto del servidor de Freeling
+void INThandler(int sig); // Controlador de interrupción Ctrl-C
 
 // Programa principal. Inicia el bucle software.
 // Entradas: argumentos de línea de comandos
@@ -89,12 +108,10 @@ void INThandler(int sig);
 // Valor de retorno: 0 si todo fue bien.
 int main(int argc, char **argv) {
 	go_on=1;
-	// Instalar manejador de la señal SIGINT
-	signal(SIGINT, INThandler);
 	char c;
 	int temp;
 	// Opciones de línea de comandos
-	while ((c=getopt(argc, argv, "o:k:"))!=255) {
+	while ((c=getopt(argc, argv, "o:k:p:"))!=255) {
 		switch (c) {
 			case 'o':
 				if(sscanf(optarg, "%d", &temp)&&temp>=0&&temp<65536) {
@@ -110,6 +127,15 @@ int main(int argc, char **argv) {
 					fprintf(stderr, "%s\n", "action_manager: error: el puerto debe ser un número entero entre 0 y 65535");
 				}
 				break;
+			case 'p':
+		        temp=atoi(optarg);
+        		if (temp>=0&&temp<65536) {
+          			g_freeling_port=temp;
+		        } else {
+        			  wcerr << "action_manager: error: El número de puerto debe ser un entero entre 0 y 65535." << endl;
+       				   return 1;
+       			}
+       			break;
 			case '?':
 				// opción desconocida
 		    	switch (optopt) {
@@ -127,6 +153,9 @@ int main(int argc, char **argv) {
 	}
 	// Iniciar Festival
 	speech_initialize();
+
+	// Instalar manejador de la señal SIGINT
+	signal(SIGINT, INThandler);
 	// inicio del bucle. Se ejecuta hasta que se recibe la señal SIGINT
 	// (Ctrl-C)
 	while (go_on) {
@@ -163,7 +192,7 @@ void processCommand(const char *filename) {
 	fseek(file, 0, SEEK_END);
 	int length=ftell(file);
 	rewind(file);
-	char *command=(char*)malloc(length+5);
+	char *command=new char[length+5];
 	// leer el comando tal cual en el array command
 	while ((c=fgetc(file))!=255) {
 		command[i++]=c;
@@ -185,7 +214,7 @@ void processCommand(const char *filename) {
 	if (getValue(value, KEY_SPEECH, command)) {
 		processSpeech(value);
 	}
-	free(command);
+	delete command;
 }
 
 // Obtiene lo que hay dentro de una etiqueta XML en un string.
@@ -202,12 +231,12 @@ int getValue(char *value, const char* key, const char *string) {
 	int keyLength=strlen(key);
 	const char *pString=string;
 	const char *pAux;
-	char *temp=(char *)malloc((keyLength+5)*sizeof(char));
+	char *temp=new char[keyLength+5];
 	// buscar inicio de la etiqueta
 	sprintf(temp, "<%s>", key);
 	if ((pString=strstr(string, temp))==NULL) {
 		// si no se encuentra, devolver 0
-		free(temp);
+		delete temp;
 		return 0; 
 	}
 	// sumar longitud de la etiqueta (longitud de "<key>"")
@@ -216,13 +245,13 @@ int getValue(char *value, const char* key, const char *string) {
 	sprintf(temp, "</%s>", key);
 	if ((pAux=strstr(string, temp))==NULL) {
 		fprintf(stderr, "Error: comando mal formado\n");
-		free(temp);
+		delete temp;
 		return 0;
 	}
 	// copiar lo que hay entre <key> y </key> en value
 	strncpy(value, pString, pAux-pString);
 	value[pAux-pString]=0;
-	free(temp);
+	delete temp;
 	return 1;
 }
 
@@ -233,10 +262,24 @@ int getValue(char *value, const char* key, const char *string) {
 // - message: mensaje recibido
 void processMessage(const char *message) {
 	fprintf(stderr, "%s\n", message); // debug
-	writeFile(FILE_MESSAGE, message);
-	int length=strlen(FILE_MESSAGE);
+	int NEGATIVE_WORDS_NUMBER=3;
+	char **NEGATIVE_WORDS=new char*[NEGATIVE_WORDS_NUMBER];
+	for (int i=0;i<NEGATIVE_WORDS_NUMBER;i++) {
+		NEGATIVE_WORDS[i]=new char[16];
+	}
+	strcpy(NEGATIVE_WORDS[0], "no");
+	strcpy(NEGATIVE_WORDS[1], "nunca");
+	strcpy(NEGATIVE_WORDS[2], "nadie");
+	writeFile(FILE_SPEECH, message);
+	char *result=new char[3*strlen(message)/2];
+	if (!freeling_analyze(result, message, g_freeling_port)) return;
+	int length=strlen(result);
+	while (result[length-1]=='.'||result[length-1]==' ') length--;
+	result[length]=0;
+	writeFile(FILE_MESSAGE, result);
+	length=strlen(FILE_MESSAGE);
 	// formar comando de análisis positivo
-	char *analyzerCommand=(char*)malloc(length+max(strlen(ANALYZER_OK_COMMAND), strlen(ANALYZER_KO_COMMAND))+5);
+	char *analyzerCommand=new char[length+max(strlen(ANALYZER_OK_COMMAND), strlen(ANALYZER_KO_COMMAND))+5];
 	sprintf(analyzerCommand, ANALYZER_OK_COMMAND, g_port_ok, FILE_MESSAGE);
 	// abrir un pipe con la ejecución del comando
 	FILE *pipe_ok=popen(analyzerCommand, "r");
@@ -247,7 +290,12 @@ void processMessage(const char *message) {
 	// obtener perplejidad en ppl_ok
 	while (fgets(line, 255, pipe_ok)) {
 		if ((aux=strstr(line, ANALYZER_LABEL))!=NULL) {
-			sscanf(aux+labelLength, "%f", &ppl_ok);
+			if (strstr(aux+labelLength, "undefined")!=NULL) {
+				ppl_ok=FLT_MAX;
+				wcerr << "Undefined ok ppl" << endl;
+			}
+			else sscanf(aux+labelLength, "%f", &ppl_ok);
+			wcerr << "ppl_ok=" << ppl_ok << endl;
 		}
 	}
 	pclose(pipe_ok);
@@ -258,21 +306,69 @@ void processMessage(const char *message) {
 	// obtener la perplejidad en ppl_ko
 	while (fgets(line, 255, pipe_ko)) {
 		if ((aux=strstr(line, ANALYZER_LABEL))!=NULL) {
-			sscanf(aux+labelLength, "%f", &ppl_ko);
+			if (strstr(aux+labelLength, "undefined")!=NULL) {
+				ppl_ko=FLT_MAX;
+				wcerr << "Undefined ko ppl" << endl;
+			}
+			else sscanf(aux+labelLength, "%f", &ppl_ko);
+			wcerr << "ppl_ko=" << ppl_ko << endl;
 		}
 	}
 	pclose(pipe_ko);
-	free(analyzerCommand);
+	delete[] analyzerCommand;
+	if (countNegativeWords(result, NEGATIVE_WORDS, NEGATIVE_WORDS_NUMBER)%2) {
+		float temp=ppl_ok;
+		ppl_ok=ppl_ko;
+		ppl_ko=temp;
+	}
 	unsigned char position[8];
 	// calcular posición correspondiente a la valoración
 	// del mensaje
 	calculatePosition(position, ppl_ok, ppl_ko);
+	// char *result=new char[3*strlen(message)/2];
+	// if (!freeling_analyze(result, message, g_freeling_port)) return;
+	// model->analyze(result);
+	// countOk=model->getCountOk();
+	// countKo=model->getCountKo();
+	// unsigned char position[8];
+	// // calcular posición correspondiente a la valoración
+	// // del mensaje
+	// calculatePosition(position, countOk, countKo);
 	int change=setPosition(position, POSITION_WEIGHT);
-	say_file(FILE_MESSAGE); // reproducir mensaje
+	say_file(FILE_SPEECH); // reproducir mensaje
 	// reproducir mensaje según el cambio de ánimo
 	if (change>MOOD_TOLERANCE) say_file(FILE_HAPPIER);
 	else if (change<-MOOD_TOLERANCE) say_file(FILE_SADDER);
 	else say_file(FILE_NOCHANGE);
+	delete[] result;
+	for (int i=0;i<NEGATIVE_WORDS_NUMBER;i++) delete[] NEGATIVE_WORDS[i];
+	delete[] NEGATIVE_WORDS;
+}
+
+// Cuenta el número de palabras de cambio de polaridad ("no", "nunca", etc) en un mensaje
+// Entradas:
+// - message: mensaje a analizar
+// - negativeWords: lista de palabras de cambio de polaridad
+// - negativeWordsNumber: tamaño de la lista
+// Valor de retorno: número de palabras de la lista que aparecen en el mensaje.
+int countNegativeWords(const char *message, char **negativeWords, int negativeWordsNumber) {
+	int result=0;
+	int index=0;
+	int temp;
+	int length=strlen(message);
+	char *word=new char[length+1];
+	while (message[index]==' ' && index<length) index++;
+	while (index<length) {
+		if (!sscanf(message+index, "%s %n", word, &temp)) index=length+1;
+		else {
+			index+=temp;
+			for (int i=0;i<negativeWordsNumber;i++) {
+				if (!strcmp(negativeWords[i], word)) result++;
+			}
+		}
+	}
+	delete[] word;
+	return result;
 }
 
 // Ejecuta un comando de colocar posición directa
@@ -331,20 +427,21 @@ int max(int a, int b) {
 	return (a<b?b:a);
 }
 
+
 // Calcula la posición correspondiente a los valores de perplejidad
 // positiva y negativa obtenidos. El procedimiento es una interpolación 
 // logarítmica entre la posición mínima y la máxima según el valor
-// de ppl_ko/ppl_ok entre OK_KO_RATIO y 1/OK_KO_RATIO
+// de countKo/countOk entre OK_KO_RATIO y 1/OK_KO_RATIO
 // Entradas:
 // - result: array donde se almacenará el resultado
-// - ppl_ok: perplejidad positiva
-// - ppl_ko: perplejidad negativa
+// - countOk: perplejidad positiva
+// - countKo: perplejidad negativa
 void calculatePosition(unsigned char *result, float ppl_ok, float ppl_ko) {
 	if (ppl_ko<1E-12) ppl_ko=1E-12; // evitar divisiones por cero
 	float ratio=ppl_ko/ppl_ok;
 	// saturar entre OK_KO_RATIO y 1/OK_KO_RATIO
 	if (ratio>OK_KO_RATIO) ratio=OK_KO_RATIO;
-	else if (ratio<(1/OK_KO_RATIO)) ratio=1/OK_KO_RATIO;
+	else if (ratio<(1.0/OK_KO_RATIO)) ratio=1/OK_KO_RATIO;
 	// interpolación logarítmica
 	float tag=log(ratio*OK_KO_RATIO)/(2*log(OK_KO_RATIO));
 	fprintf(stderr, "Tag: %f\n", tag); // debug

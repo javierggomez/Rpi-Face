@@ -16,19 +16,22 @@
 
 
 CC=g++
+CXX=g++
 CFLAGS=-Wall
+CXXFLAGS=-Wall
 FESTIVAL_FLAGS=-I/usr/include/festival -I/usr/lib/speech_tools/include -Lfestival/src/lib -leststring -lestools -lestbase -lFestival
-EXECUTABLES=server_query.cgi action_manager vote_manager move_face face_controller_test servo_controller_test servo_controllerTest rpi_uart_test
+FREELING_FLAGS=-lfreeling -L/usr/local/lib -I/usr/local/include
+EXECUTABLES=server_query.cgi action_manager vote_manager move_face face_controller_test servo_controller_test servo_controllerTest rpi_uart_test freeling_server freeling_test UnigramModel_test
 
-default: server_query.cgi action_manager vote_manager
+default: server_query.cgi action_manager vote_manager freeling_server
 
 all: $(EXECUTABLES) 
 
 server_query.cgi: server_query.o vote_handler.o 
 	$(CC) $(CFLAGS) -o server_query.cgi server_query.o  vote_handler.o 
 
-action_manager: action_manager.o speech_synthesis.o position.o face_controller.o servo_controller.o rpi_uart.o
-	$(CC) $(CFLAGS) -o action_manager action_manager.o speech_synthesis.o position.o face_controller.o servo_controller.o rpi_uart.o $(FESTIVAL_FLAGS)
+action_manager: action_manager.o freeling_client.o UnigramModel.o speech_synthesis.o position.o face_controller.o servo_controller.o rpi_uart.o
+	$(CXX) $(CFLAGS) -o action_manager action_manager.o freeling_client.o UnigramModel.o speech_synthesis.o position.o face_controller.o servo_controller.o rpi_uart.o $(FREELING_FLAGS) $(FESTIVAL_FLAGS)
 
 move_face: move_face.o speech_synthesis.o face_controller.o servo_controller.o rpi_uart.o
 	$(CC) -o move_face move_face.o speech_synthesis.o face_controller.o servo_controller.o rpi_uart.o $(FESTIVAL_FLAGS)
@@ -53,6 +56,18 @@ rpi_uart_test: rpi_uart_test.o rpi_uart.o
 
 vote_manager: vote_manager.o vote_handler.o
 	$(CC) $(CFLAGS) -o vote_manager vote_manager.o vote_handler.o
+
+freeling_test: freeling_test.o freeling_client.o freeling_server
+	$(CXX) $(CXXFLAGS) -o freeling_test freeling_test.o freeling_client.o $(FREELING_FLAGS)
+
+freeling_translate: freeling_translate.o freeling_client.o freeling_server
+	$(CXX) $(CXXFLAGS) -o freeling_translate freeling_translate.o freeling_client.o $(FREELING_FLAGS)
+
+freeling_server: freeling_server.o
+	$(CXX) $(CXXFLAGS) -o freeling_server freeling_server.o $(FREELING_FLAGS)
+
+UnigramModel_test: UnigramModel_test.o UnigramModel.o
+	$(CXX) $(CXXFLAGS) -o UnigramModel_test UnigramModel_test.o UnigramModel.o
 
 .PHONY = clean 
 clean: 

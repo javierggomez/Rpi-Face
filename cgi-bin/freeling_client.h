@@ -14,16 +14,12 @@
 //    You should have received a copy of the GNU General Public License
 //    along with Rpi-Face.  If not, see <http://www.gnu.org/licenses/>.
 
-#ifndef ACTION_MANAGER
-#define ACTION_MANAGER
-void processCommand(const char *filename);
-int getValue(char *value, const char* key, const char *string);
-void processMessage(const char *message);
-int countNegativeWords(const char *message, char **negativeWords, int negativeWordsNumber);
-void processPosition(const char *value);
-void processSpeech(const char *filename);
-int writeFile(const char *filename, const char *string);
-int max(int a, int b);
-void calculatePosition(unsigned char *result, int countOk, int countKo);
-void calculatePosition(unsigned char *result, float ppl_ok, float ppl_ko);
+// Servidor de análisis y acciones. Consiste en un bucle software que se
+// mantiene a la espera de comandos recibidos del servidor y analiza los 
+// mensajes que llegan o ejecuta los comandos que recibe (movimiento de 
+// la cabeza o reproducción de textos).
+
+#ifndef FREELING_CLIENT
+#define FREELING_CLIENT
+int freeling_analyze(char *result, const char *message, int portno);
 #endif
