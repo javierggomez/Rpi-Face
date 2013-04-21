@@ -512,9 +512,7 @@ int commandMessage(const char *filename, const char *semaphore, const char *mess
 // - vote: voto recibido (0 negativo, 1 positivo).
 // Valor de retorno: 1 si la operación tuvo éxito; 0 si no.
 int commandVote(const char *filename, const char *semaphore, int vote) {
-	addVote(vote); // añadir voto al recuento
 	// esperar hasta que no haya semáforo
-	while (!access(semaphore, F_OK)) usleep(DELAY);
 	const unsigned char *position=vote?FACE_HAPPY:FACE_SAD;
 	FILE *file=fopen(filename, "w"); // abrir o crear archivo
 	if (file==NULL) {
@@ -535,6 +533,7 @@ int commandVote(const char *filename, const char *semaphore, int vote) {
 	// Escribir texto a reproducir según el voto
 	fprintf(file, "%s</speech>\n", vote?FILE_PLUS:FILE_MINUS);
 	fclose(file);
+	while (!access(semaphore, F_OK)) usleep(DELAY);
 	sendCommand(semaphore); // enviar comando
 	// Obtener recuento de votos
 	VoteCount *count=getVoteCount();
@@ -559,7 +558,9 @@ int commandVote(const char *filename, const char *semaphore, int vote) {
 	} 
 	fprintf(file, "</position>\n");
 	fclose(file);
+	while (!access(semaphore, F_OK)) usleep(DELAY);
 	sendCommand(semaphore); // enviar el comando
+	addVote(vote); // añadir voto al recuento
 	return 1;
 }
 

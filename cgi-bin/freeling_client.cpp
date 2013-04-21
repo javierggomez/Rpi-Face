@@ -33,7 +33,7 @@
 #include "freeling_client.h"
 using namespace std;
 
-#define MESSAGE_MAX_LENGTH 1024
+#define MESSAGE_MAX_LENGTH 65536
 
 // Envía un mensaje al servidor Freeling para que lo analice.
 // Entradas:

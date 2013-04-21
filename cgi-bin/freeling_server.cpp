@@ -40,7 +40,7 @@ using namespace std;
 // Puerto por defecto del servidor
 #define PORT 25513
 // Longitud máxima del mensaje
-#define MESSAGE_MAX_LENGTH 1024
+#define MESSAGE_MAX_LENGTH 65536
 
 void INThandler(int sig);
 void processAnalysis(char *result, list<sentence> &ls);
