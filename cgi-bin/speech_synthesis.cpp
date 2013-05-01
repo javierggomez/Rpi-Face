@@ -15,8 +15,11 @@
 //    along with Rpi-Face.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <festival.h>
-#include <stdio.h>
+#include <cstdio>
+#include <cstdarg>
 #include "speech_synthesis.h"
+
+#define COMMAND_LENGTH 2048
 
 // Inicializa la librería Festival con los parámetros por defecto
 // Hay que llamar a esta función antes de llamar a cualquier otra
@@ -44,8 +47,40 @@ void say_text(const char *text) {
 	festival_say_text(text);
 	//festival_wait_for_spooler(); // bloquear ejecución hasta que acabe de decirlo
 }
+
+// Genera las etiquetas de fonemas asociadas a un texto utilizando 
+// Festival. Devuelve un archivo de etiquetas fonéticas y un archivo de segmentos
+// Entradas: 
+// - file_segs: Archivo donde devolver los segmentos
+// - file_all: Archivo donde devolver las etiquetas
+// - text: Texto a analizar
+// - say: (Opcional) Si es true, se reproduce el fichero tras generar las etiquetas
+void generate_labels(const char *file_segs, const char *file_all, const char *text, bool say) {
+	festival_eval_command("(voice_el_diphone)"); // voz en español
+	run_command("(set! utt1 (Utterance Text \"%s\"))", text); // crear Utterance
+	run_command("(utt.synth utt1)"); // generar etiquetas
+	run_command("(utt.save utt1 \"%s\")", file_all); // guardar todo
+	run_command("(utt.save.segs utt1 \"%s\")", file_segs); // guardar segmentos
+	if (say) run_command("(utt.play utt1)"); // opcionalmente, reproducir
+}
+
 // Bloquea la ejecución hasta que se acabe de decir todo. Importante llamar a esto al
 // final del programa.
 void speech_close() {
 	festival_wait_for_spooler();
+}
+
+// Ejecuta un comando Festival después de formatearlo al estilo de 
+// printf.
+// Entradas:
+// - format: formato del comando (igual que en printf)
+// - ...: (Opcional): variables para sustituir en el formato.
+void run_command(const char *format, ...) {
+	char *command=new char[COMMAND_LENGTH];
+	va_list ap;
+	va_start(ap, format);
+	vsprintf(command, format, ap);
+	va_end(ap);
+	festival_eval_command(command);
+	delete[] command;
 }

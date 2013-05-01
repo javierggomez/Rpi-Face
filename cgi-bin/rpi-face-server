@@ -21,6 +21,7 @@ PORT_KO=27183
 EMO_OK=lm/words_ok.lm
 EMO_KO=lm/words_ko.lm
 FREELING_PORT=25513
+FLAG_EMOTIONAL=
 
 hlp() {
 	echo "rpi-face-server: Servidor para el proyecto Rpi-Face."
@@ -32,11 +33,12 @@ hlp() {
 	echo "-k words_ko: Archivo con lista de palabras negativas (por defecto, lm/words_ko.txt)."
 	echo "-p freeling_port: Puerto del servidor Freeling (por defecto 31416)."
 	echo "-x: Cierra cualquier otra instancia del programa que se esté ejecutando y sale."
+	echo "-e: Utiliza voz emocional."
 	echo "-h: Muestra esta ayuda."
 }
 
 # procesar opciones
-while getopts :hO:K:o:k:p:x option
+while getopts :hO:K:o:k:p:xe option
 do
 	case "$option" in
 		h) hlp
@@ -57,9 +59,12 @@ do
 		o) EMO_OK=$OPTARG;;
 		k) EMO_KO=$OPTARG;;
 		p) FREELING_PORT=$OPTARG;;
-		x) killall -SIGINT ngram;
+		x) killall ngram;
+			killall -SIGINT freeling_server;
 			killall rpi-face-server;
 			exit 0;;
+		e) FLAG_EMOTIONAL="-e";
+			;;
 		*) echo "rpi-face-server: error: Opción incorrecta." >&2
 			exit 1;;  # Opción incorrecta
 	esac
@@ -75,7 +80,7 @@ ngram -lm "$EMO_KO" -server-port "$PORT_KO" > /dev/null 2> /dev/null &
 # Iniciar Freeling
 ./freeling_server -p "$FREELING_PORT" >/dev/null &
 # Iniciar servidor de acciones
-./action_manager -o "$PORT_OK" -k "$PORT_KO" -p "$FREELING_PORT"
+./action_manager -o "$PORT_OK" -k "$PORT_KO" -p "$FREELING_PORT" "$FLAG_EMOTIONAL"
 # Cerrar servidores de probabilidad cuando se salga de action_manager
 killall -SIGINT freeling_server
 killall ngram

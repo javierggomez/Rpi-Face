@@ -19,9 +19,9 @@ CC=g++
 CXX=g++
 CFLAGS=-Wall
 CXXFLAGS=-Wall
-FESTIVAL_FLAGS=-I/usr/include/festival -I/usr/lib/speech_tools/include -Lfestival/src/lib -leststring -lestools -lestbase -lFestival
+FESTIVAL_FLAGS=-lFestival -Lfestival/src/lib -lestools -lestbase -leststring -I/usr/include/festival -I/usr/lib/speech_tools/include
 FREELING_FLAGS=-lfreeling -L/usr/local/lib -I/usr/local/include
-EXECUTABLES=server_query.cgi action_manager vote_manager move_face face_controller_test servo_controller_test servo_controllerTest rpi_uart_test freeling_server freeling_test UnigramModel_test
+EXECUTABLES=server_query.cgi action_manager vote_manager move_face face_controller_test servo_controller_test servo_controllerTest rpi_uart_test freeling_server freeling_test UnigramModel_test festival_test
 
 default: server_query.cgi action_manager vote_manager freeling_server
 
@@ -31,7 +31,7 @@ server_query.cgi: server_query.o vote_handler.o
 	$(CC) $(CFLAGS) -o server_query.cgi server_query.o  vote_handler.o 
 
 action_manager: action_manager.o freeling_client.o UnigramModel.o speech_synthesis.o position.o face_controller.o servo_controller.o rpi_uart.o
-	$(CXX) $(CFLAGS) -o action_manager action_manager.o freeling_client.o UnigramModel.o speech_synthesis.o position.o face_controller.o servo_controller.o rpi_uart.o $(FREELING_FLAGS) $(FESTIVAL_FLAGS)
+	$(CXX) $(CXXFLAGS) -o action_manager action_manager.o freeling_client.o UnigramModel.o speech_synthesis.o position.o face_controller.o servo_controller.o rpi_uart.o $(FREELING_FLAGS) $(FESTIVAL_FLAGS)
 
 move_face: move_face.o speech_synthesis.o face_controller.o servo_controller.o rpi_uart.o
 	$(CC) -o move_face move_face.o speech_synthesis.o face_controller.o servo_controller.o rpi_uart.o $(FESTIVAL_FLAGS)
@@ -39,11 +39,11 @@ move_face: move_face.o speech_synthesis.o face_controller.o servo_controller.o r
 vote_process.o: vote_process.c vote_process.h vote_handler.o speech_synthesis.o face_controller.o
 	$(CC) $(CFLAGS) -c -o vote_process.o vote_process.c $(FESTIVAL_FLAGS)
 
-speech_synthesis.o: speech_synthesis.c speech_synthesis.h
-	$(CC) -c speech_synthesis.c $(FESTIVAL_FLAGS) -o speech_synthesis.o
+speech_synthesis.o: speech_synthesis.cpp speech_synthesis.h
+	$(CXX) $(CXXFLAGS) -c $(FESTIVAL_FLAGS) speech_synthesis.cpp -o speech_synthesis.o
 
 face_controller_test: face_controller_test.o face_controller.o servo_controller.o rpi_uart.o
-	$(CC) $(CFLAGS) -o face_controller_test face_controller_test.o face_controller.o servo_controller.o rpi_uart.o
+	$(CXX) $(CXXFLAGS) -o face_controller_test face_controller_test.o face_controller.o servo_controller.o rpi_uart.o
 
 servo_controller_test: servo_controller_test.o servo_controller.o rpi_uart.o
 	$(CC) $(CFLAGS) -o servo_controller_test servo_controller_test.o servo_controller.o rpi_uart.o
@@ -68,6 +68,9 @@ freeling_server: freeling_server.o
 
 UnigramModel_test: UnigramModel_test.o UnigramModel.o
 	$(CXX) $(CXXFLAGS) -o UnigramModel_test UnigramModel_test.o UnigramModel.o
+
+festival_test: festival_test.o speech_synthesis.o
+	$(CXX) $(CXXFLAGS) -o festival_test festival_test.o speech_synthesis.o $(FESTIVAL_FLAGS)
 
 .PHONY = clean 
 clean: 

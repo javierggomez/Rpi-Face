@@ -93,11 +93,20 @@ using namespace std;
 #define FILENAME_LENGTH 128
 // Nombre del archivo para los mensajes a reproducir
 #define FILE_SPEECH "data/speech.am"
+// Máxima longitud de un mensaje
+#define MESSAGE_LENGTH 1024
+// Segmentos obtenidos por Festival del mensaje a reproducir
+#define FILE_SEGS "data/festival_labels.segs"
+// Etiquetas obtenidas por Festival del mensaje a reproducir
+#define FILE_ALL "data/festival_labels.all"
+// Texto de bienvenida
+#define TEXT_HELLO "Hola"
 
 int go_on; // variable para mantener ejecución del bucle
 int g_port_ok=PORT_OK; // puerto del servidor positivo
 int g_port_ko=PORT_KO; // puerto del servidor negativo
 int g_freeling_port=FREELING_PORT; // puerto del servidor de Freeling
+bool g_flag_emotional=false; // flag que indica si se usa voz emocional
 void INThandler(int sig); // Controlador de interrupción Ctrl-C
 
 // Programa principal. Inicia el bucle software.
@@ -105,13 +114,15 @@ void INThandler(int sig); // Controlador de interrupción Ctrl-C
 // Opciones:
 // -o PORT_OK: define el puerto del servidor positivo
 // -k PORT_KO: define el puerto del servidor negativo
+// -p FREELING_PORT: define el puerto que usará Freeling
+// -e: utiliza voz emocional
 // Valor de retorno: 0 si todo fue bien.
 int main(int argc, char **argv) {
 	go_on=1;
 	char c;
 	int temp;
 	// Opciones de línea de comandos
-	while ((c=getopt(argc, argv, "o:k:p:"))!=255) {
+	while ((c=getopt(argc, argv, "o:k:p:e"))!=255) {
 		switch (c) {
 			case 'o':
 				if(sscanf(optarg, "%d", &temp)&&temp>=0&&temp<65536) {
@@ -136,6 +147,9 @@ int main(int argc, char **argv) {
        				   return 1;
        			}
        			break;
+       		case 'e':
+       			g_flag_emotional=true;
+       			break;
 			case '?':
 				// opción desconocida
 		    	switch (optopt) {
@@ -156,6 +170,9 @@ int main(int argc, char **argv) {
 
 	// Instalar manejador de la señal SIGINT
 	signal(SIGINT, INThandler);
+	setPosition(FACE_NEUTRAL);
+	synthesizeText(TEXT_HELLO);
+	wcerr << "action_manager: Servidor listo" << endl;
 	// inicio del bucle. Se ejecuta hasta que se recibe la señal SIGINT
 	// (Ctrl-C)
 	while (go_on) {
@@ -335,11 +352,11 @@ void processMessage(const char *message) {
 	// // del mensaje
 	// calculatePosition(position, countOk, countKo);
 	int change=setPosition(position, POSITION_WEIGHT);
-	say_file(FILE_SPEECH); // reproducir mensaje
+	synthesizeText(message); // reproducir mensaje
 	// reproducir mensaje según el cambio de ánimo
-	if (change>MOOD_TOLERANCE) say_file(FILE_HAPPIER);
-	else if (change<-MOOD_TOLERANCE) say_file(FILE_SADDER);
-	else say_file(FILE_NOCHANGE);
+	if (change>MOOD_TOLERANCE) synthesizeFile(FILE_HAPPIER);
+	else if (change<-MOOD_TOLERANCE) synthesizeFile(FILE_SADDER);
+	else synthesizeFile(FILE_NOCHANGE);
 	delete[] result;
 	for (int i=0;i<NEGATIVE_WORDS_NUMBER;i++) delete[] NEGATIVE_WORDS[i];
 	delete[] NEGATIVE_WORDS;
@@ -378,7 +395,6 @@ int countNegativeWords(const char *message, char **negativeWords, int negativeWo
 //    un noveno número real entre 0 y 1 que indica el peso
 //    de la posición anterior (por defecto, 0).
 void processPosition(const char *value) {
-	fprintf(stderr, "%s\n", value);  // debug
 	const char *pValue=value;
 	int nRead;
 	unsigned char position[POSITION_LENGTH];
@@ -399,7 +415,34 @@ void processPosition(const char *value) {
 // Entradas:
 // - filename: nombre del archivo con el texto a reproducir
 void processSpeech(const char *filename) {
-	say_file(filename);
+	synthesizeFile(filename);
+}
+
+// Sintetiza y reproduce el contenido de un archivo. Utiliza voz emocional 
+// si g_flag_emotional es true, y voz normal en caso contrario
+// Entradas:
+// - filename: nombre del archivo
+void synthesizeFile(const char *filename) {
+	if (!g_flag_emotional) {
+		say_file(filename);
+		return;
+	}
+	char *message=new char[MESSAGE_LENGTH];
+	readFile(message, filename);
+	synthesizeText(message);
+	delete[] message;
+}
+
+// Sintetiza y reproduce un texto. Utiliza voz emocional 
+// si g_flag_emotional es true, y voz normal en caso contrario
+// Entradas:
+// - text: texto a reproducir
+void synthesizeText(const char *text) {
+	if (!g_flag_emotional) {
+		say_text(text);
+		return;
+	}
+	generate_labels(FILE_SEGS, FILE_ALL, text, true);
 }
 
 // Escribe el contenido de un string en un archivo
@@ -414,6 +457,23 @@ int writeFile(const char *filename, const char *string) {
 	while ((*pString)) {
 		fputc(*(pString++), file);
 	}
+	fclose(file);
+	return 1;
+}
+// Lee el contenido de un fichero en un string
+// Entradas:
+// - filename: nombre de archivo
+// - buffer: string donde se devolverá el resultado
+// Valor de retorno: 1 si la operación tiene éxito; 0 si no.
+int readFile(char *buffer, const char *filename) {
+	FILE* file=fopen(filename, "r");
+	if (file==NULL) return 0;
+	int c;
+	char *pBuffer=buffer;
+	while ((c=fgetc(file))!=EOF) {
+		*(pBuffer++)=c;
+	}
+	*pBuffer=0;
 	fclose(file);
 	return 1;
 }
