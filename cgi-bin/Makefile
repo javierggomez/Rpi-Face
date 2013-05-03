@@ -21,7 +21,8 @@ CFLAGS=-Wall
 CXXFLAGS=-Wall
 FESTIVAL_FLAGS=-lFestival -Lfestival/src/lib -lestools -lestbase -leststring -I/usr/include/festival -I/usr/lib/speech_tools/include
 FREELING_FLAGS=-lfreeling -L/usr/local/lib -I/usr/local/include
-EXECUTABLES=server_query.cgi action_manager vote_manager move_face face_controller_test servo_controller_test servo_controllerTest rpi_uart_test freeling_server freeling_test UnigramModel_test festival_test
+GPIO_FLAGS=-lbcm2835 -lrt
+EXECUTABLES=server_query.cgi action_manager vote_manager init move_face face_controller_test servo_controller_test servo_controllerTest rpi_uart_test freeling_server freeling_test UnigramModel_test festival_test
 
 default: server_query.cgi action_manager vote_manager freeling_server
 
@@ -30,8 +31,8 @@ all: $(EXECUTABLES)
 server_query.cgi: server_query.o vote_handler.o 
 	$(CC) $(CFLAGS) -o server_query.cgi server_query.o  vote_handler.o 
 
-action_manager: action_manager.o freeling_client.o UnigramModel.o speech_synthesis.o position.o face_controller.o servo_controller.o rpi_uart.o
-	$(CXX) $(CXXFLAGS) -o action_manager action_manager.o freeling_client.o UnigramModel.o speech_synthesis.o position.o face_controller.o servo_controller.o rpi_uart.o $(FREELING_FLAGS) $(FESTIVAL_FLAGS)
+action_manager: action_manager.o freeling_client.o speech_synthesis.o position.o face_controller.o servo_controller.o rpi_uart.o
+	$(CXX) $(CXXFLAGS) -o action_manager action_manager.o freeling_client.o speech_synthesis.o position.o face_controller.o servo_controller.o rpi_uart.o $(FREELING_FLAGS) $(FESTIVAL_FLAGS)
 
 move_face: move_face.o speech_synthesis.o face_controller.o servo_controller.o rpi_uart.o
 	$(CC) -o move_face move_face.o speech_synthesis.o face_controller.o servo_controller.o rpi_uart.o $(FESTIVAL_FLAGS)
@@ -71,6 +72,12 @@ UnigramModel_test: UnigramModel_test.o UnigramModel.o
 
 festival_test: festival_test.o speech_synthesis.o
 	$(CXX) $(CXXFLAGS) -o festival_test festival_test.o speech_synthesis.o $(FESTIVAL_FLAGS)
+
+scp_connect_test: scp_connect_test.o scp_connect.o
+	$(CXX) $(CXXFLAGS) -o scp_connect_test scp_connect_test.o scp_connect.o
+
+init: init.o hardware.o
+	$(CXX) $(CXXFLAGS) -o init init.o hardware.o $(GPIO_FLAGS)
 
 .PHONY = clean 
 clean: 
