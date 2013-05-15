@@ -56,8 +56,10 @@ int main(){
     gpio_fsel(GPIO_EMOTION, true);
     gpio_fsel(GPIO_RED, false);
     gpio_fsel(GPIO_YELLOW, false);
+    gpio_fsel(GPIO_GREEN, false);
     gpio_writePin(GPIO_RED, true);
     gpio_writePin(GPIO_YELLOW, false);
+    gpio_writePin(GPIO_GREEN, false);
     cout << "init: Listo" << endl;
 	// turnOnRed();
 	while(g_main_running){
