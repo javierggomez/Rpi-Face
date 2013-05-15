@@ -22,11 +22,12 @@ void processMessage(const char *message);
 int countNegativeWords(const char *message, char **negativeWords, int negativeWordsNumber);
 void processPosition(const char *value);
 void processSpeech(const char *filename);
-void synthesizeFile(const char *filename);
-void synthesizeText(const char *text);
+void synthesizeFile(const char *filename, int emo=0);
+void synthesizeText(const char *text, int emo=0);
 int writeFile(const char *filename, const char *string);
 int readFile(char *buffer, const char *filename);
 int max(int a, int b);
 void calculatePosition(unsigned char *result, int countOk, int countKo);
-void calculatePosition(unsigned char *result, float ppl_ok, float ppl_ko);
+void calculatePosition(unsigned char *result, float tag);
+float calculateTag(float ppl_ok, float ppl_ko);
 #endif

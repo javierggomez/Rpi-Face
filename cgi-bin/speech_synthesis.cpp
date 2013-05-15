@@ -55,13 +55,37 @@ void say_text(const char *text) {
 // - file_all: Archivo donde devolver las etiquetas
 // - text: Texto a analizar
 // - say: (Opcional) Si es true, se reproduce el fichero tras generar las etiquetas
-void generate_labels(const char *file_segs, const char *file_all, const char *text, bool say) {
-	festival_eval_command("(voice_el_diphone)"); // voz en español
-	run_command("(set! utt1 (Utterance Text \"%s\"))", text); // crear Utterance
-	run_command("(utt.synth utt1)"); // generar etiquetas
-	run_command("(utt.save utt1 \"%s\")", file_all); // guardar todo
-	run_command("(utt.save.segs utt1 \"%s\")", file_segs); // guardar segmentos
-	if (say) run_command("(utt.play utt1)"); // opcionalmente, reproducir
+void generate_labels(const char *name, const char *filename, const char *text, bool say) {
+	// festival_eval_command("(voice_el_diphone)"); // voz en español
+	// run_command("(set! utt1 (Utterance Text \"%s\"))", text); // crear Utterance
+	// // run_command("(utt.synth utt1)"); // generar etiquetas
+	// // 
+	// // run_command("(utt.save.segs utt1 \"%s\")", file_segs); // guardar segmentos
+
+	// // (voice_uvigo3_hts)
+	// // (set! utt1 (Utterance Text "Hola Robin, qué tal.")");)");
+	// run_command("(Initialize utt1)");
+	// run_command("(Text utt1)");
+	// run_command("(Token_POS utt1)");
+	// run_command("(Token utt1)");
+	// run_command("(POS utt1)");
+	// run_command("(Phrasify utt1)");
+	// run_command("(Word utt1)");
+	// run_command("(Pauses utt1)");
+	// run_command("(Intonation utt1)");
+	// run_command("(PostLex utt1)");
+	// run_command("(utt.save utt1 \"%s\")", file_all); // guardar todo
+	// // run_command("(quit)
+
+	// if (say) run_command("(utt.play utt1)"); // opcionalmente, reproducir
+	FILE* file=fopen(filename, "w");
+	fprintf(file, "( %s \"%s\" )\n", name, text);
+	fclose(file);
+
+	char command[256];
+	sprintf(command, "./parser/generate_labels.sh %s", filename);
+	system(command);
+	if (say) say_text(text);
 }
 
 // Bloquea la ejecución hasta que se acabe de decir todo. Importante llamar a esto al

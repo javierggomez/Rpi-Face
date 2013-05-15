@@ -61,6 +61,8 @@ do
 		p) FREELING_PORT=$OPTARG;;
 		x) killall ngram;
 			killall -SIGINT freeling_server;
+			killall freeling_server;
+			killall action_manager;
 			killall rpi-face-server;
 			exit 0;;
 		e) FLAG_EMOTIONAL="-e";
@@ -83,4 +85,5 @@ ngram -lm "$EMO_KO" -server-port "$PORT_KO" > /dev/null 2> /dev/null &
 ./action_manager -o "$PORT_OK" -k "$PORT_KO" -p "$FREELING_PORT" "$FLAG_EMOTIONAL"
 # Cerrar servidores de probabilidad cuando se salga de action_manager
 killall -SIGINT freeling_server
+killall freeling_server;
 killall ngram

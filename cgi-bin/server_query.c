@@ -481,7 +481,7 @@ int commandPosition(const char *filename, const char *semaphore, int face) {
 	} 
 	fprintf(file, "</position>\n<speech>");
 	// enviar también el mensaje a reproducir
-	fprintf(file, "%s</speech>\n", POSITIONS_MSGS[face]);
+	fprintf(file, "%s\n%d</speech>\n", POSITIONS_MSGS[face], (face+1)%5);
 	fclose(file);
 	sendCommand(semaphore); // crear semáforo
 	return 1;
@@ -531,7 +531,7 @@ int commandVote(const char *filename, const char *semaphore, int vote) {
 	} 
 	fprintf(file, "</position>\n<speech>");
 	// Escribir texto a reproducir según el voto
-	fprintf(file, "%s</speech>\n", vote?FILE_PLUS:FILE_MINUS);
+	fprintf(file, "%s\n%d</speech>\n", vote?FILE_PLUS:FILE_MINUS, vote?1:2);
 	fclose(file);
 	while (!access(semaphore, F_OK)) usleep(DELAY);
 	sendCommand(semaphore); // enviar comando

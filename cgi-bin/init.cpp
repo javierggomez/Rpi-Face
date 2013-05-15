@@ -22,26 +22,26 @@
 #include <cstdlib>
 
 #include "hardware.h"
+#include "toggle_emotion.h"
 
 // Tiempo entre comprobaciones
 #define LOOP_DELAY 100000
-// Tiempo antirrebotes
-#define DEBOUNCE_DELAY 8000
-// Umbral antirrebotes
-#define DEBOUNCE_THRESHOLD 8
-// Máximo de comprobaciones antirrebotes
-#define DEBOUNCE_MAX_CHECKS 100
 // GPIO para el botón
 #define GPIO_BUTTON RPI_GPIO_P1_16
 // GPIO para el LED rojo
 #define GPIO_RED RPI_GPIO_P1_18
 // GPIO para el LED amarillo
 #define GPIO_YELLOW RPI_GPIO_P1_15
+// GPIO para el LED verde
+#define GPIO_GREEN RPI_GPIO_P1_22
+// GPIO para el botón de cambiar estado emocional
+#define GPIO_EMOTION RPI_GPIO_P1_11
 
 using namespace std;
 
 void INThandler(int sig); // Controlador de interrupción Ctrl-C
 void onButtonPressed();
+void onEmotionPressed();
 void runInBackground(const char *format, ...);
 
 bool g_main_running=true;
@@ -53,6 +53,7 @@ int main(){
 		return 1;
 	}
     gpio_fsel(GPIO_BUTTON, true);
+    gpio_fsel(GPIO_EMOTION, true);
     gpio_fsel(GPIO_RED, false);
     gpio_fsel(GPIO_YELLOW, false);
     gpio_writePin(GPIO_RED, true);
@@ -64,12 +65,16 @@ int main(){
 			onButtonPressed();
 			gpio_waitForRelease(GPIO_BUTTON);
 		}
+		if (gpio_readPin(GPIO_EMOTION) && gpio_debounce(GPIO_EMOTION)) {
+			onEmotionPressed();
+			gpio_waitForRelease(GPIO_EMOTION);
+		}
 		usleep(LOOP_DELAY);
 	}
+	gpio_writePin(GPIO_RED, false);
+	gpio_writePin(GPIO_YELLOW, false);
+	gpio_writePin(GPIO_GREEN, false);	
     gpio_close();
-	//Habría que poner que cuando se termine todo de cargar se encienda la
-	//verde dentro de action manager probablemente
-	//Y un sistema para que en vez de con control-c se pueda terminar apagando un interruptor
 }
 
 // Manejador de la señal SIGINT (recibida si el usuario pulsa Ctrl-C). 
@@ -88,17 +93,27 @@ void INThandler(int sig) {
 void onButtonPressed() {
 	if (g_server_running) {
 		cout << "Parando servidor" << endl;
-		runInBackground("./rpi-face-server -x");
+		gpio_writePin(GPIO_GREEN, false);
 		gpio_writePin(GPIO_YELLOW, false);
 		gpio_writePin(GPIO_RED, true);
+		runInBackground("./rpi-face-server -x");
 		g_server_running=false;
 	} else {
 		cout << "Iniciando servidor" << endl;
-		runInBackground("./rpi-face-server -e");
+		gpio_writePin(GPIO_GREEN, false);
 		gpio_writePin(GPIO_YELLOW, true);
 		gpio_writePin(GPIO_RED, false);
+		runInBackground("./rpi-face-server -e");
 		g_server_running=true;
 	}
+}
+
+// Ejecutado al pulsar el botón de cambio de emoción. 
+// Cambia el estado emocional del servidor, si éste esá encendido
+void onEmotionPressed() {
+	if (!g_server_running) return;
+	cout << "Cambiando estado emocional" << endl;
+	toggle_emotion();
 }
 
 // Ejecuta un comando en background llamando a un subproceso y
@@ -115,9 +130,9 @@ void runInBackground(const char *format, ...) {
 		va_start(ap, format);
 		char command[256];
 		vsprintf(command, format, ap);
-		system(command); // ejecutar comando
 		va_end(ap);
-		exit(0);
+		system(command); // ejecutar comando
+		_Exit(0);
 	} else {
 		// proceso principal: vuelve inmediatamente
 		return;

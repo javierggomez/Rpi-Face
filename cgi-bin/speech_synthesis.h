@@ -20,6 +20,6 @@ void speech_initialize();
 void say_file(const char *file);
 void say_text(const char *text);
 void speech_close();
-void generate_labels(const char *file_segs, const char *file_all, const char *text, bool say=false);
+void generate_labels(const char *name, const char *filename, const char *text, bool say=false);
 void run_command(const char *format, ...);
 #endif

@@ -15,7 +15,9 @@
 //    along with Rpi-Face.  If not, see <http://www.gnu.org/licenses/>.
 
 #ifndef SCP_CONNECT
-#define SCP_CONNECT
-int scp_transfer(const char *local, const char *user, const char *host, const char *dir, const char *authFile);
-int scp_receive(const char *user, const char *host, const char *dir, const char *local, const char *authFile);
+#define SCP_CONNEC
+int scp_transfer(const char *local, const char *user, const char *host, const char *dir, const char *authFile=0);
+int scp_receive(const char *user, const char *host, const char *dir, const char *local, const char *authFile=0);
+int ssh_command(const char *user, const char *host, const char *format, ...);
+int run_system_command(const char *format, ...);
 #endif

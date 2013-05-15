@@ -17,9 +17,11 @@
 #include <iostream>
 #include <cstdio>
 #include <cstdlib>
+#include <cstdarg>
 #include "scp_connect.h"
 
 #define SIZE 300
+#define COMMAND_LENGTH 512
 
 using namespace std;
 // Se encarga de transferir un archivo mediante scp a una máquina remota
@@ -58,4 +60,33 @@ int scp_receive(const char *user, const char *host, const char *dir, const char 
 	}
 	cerr << command << endl;
 	return system(command);
+}
+
+int ssh_command(const char *user, const char *host, const char *format, ...) {
+	char *command=new char[COMMAND_LENGTH];
+	char *pCommand=command;
+	pCommand+=sprintf(pCommand, "ssh %s@%s ", user, host);
+	va_list ap;
+	va_start(ap, format);
+	vsprintf(pCommand, format, ap);
+	va_end(ap);
+	int status=system(command);
+	delete[] command;
+	return status;
+}
+
+// Ejecuta un comando Festival después de formatearlo al estilo de 
+// printf.
+// Entradas:
+// - format: formato del comando (igual que en printf)
+// - ...: (Opcional): variables para sustituir en el formato.
+int run_system_command(const char *format, ...) {
+	char *command=new char[COMMAND_LENGTH];
+	va_list ap;
+	va_start(ap, format);
+	vsprintf(command, format, ap);
+	va_end(ap);
+	int status=system(command);
+	delete[] command;
+	return status;
 }

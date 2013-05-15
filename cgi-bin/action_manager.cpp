@@ -31,7 +31,9 @@
 
 #include "speech_synthesis.h"
 #include "face_controller.h"
+#include "scp_connect.h"
 #include "position.h"
+#include "hts.h"
 #include "freeling_client.h"
 #include "action_manager.h"
 
@@ -49,6 +51,8 @@ using namespace std;
 #define KEY_POSITION "position"
 // Etiqueta XML para el texto a reproducir
 #define KEY_SPEECH "speech"
+// Etiqueta XML para cambiar estado emocional
+#define KEY_EMOTION "emotion"
 // Longitud del array que define una posición
 #define POSITION_LENGTH 8
 // Tiempo entre comprobaciones
@@ -56,7 +60,7 @@ using namespace std;
 // Tolerancia de cambio de estado
 #define MOOD_TOLERANCE 16
 // Relación máxima entre la valoración positiva y la negativa para
-// movar la cabeza a su posición máxima. Debe ser un float.
+// mover la cabeza a su posición máxima. Debe ser un float.
 #define OK_KO_RATIO 2.0
 // Puerto predeterminado del servidor positivo
 #define PORT_OK 31416
@@ -96,11 +100,25 @@ using namespace std;
 // Máxima longitud de un mensaje
 #define MESSAGE_LENGTH 1024
 // Segmentos obtenidos por Festival del mensaje a reproducir
-#define FILE_SEGS "data/festival_labels.segs"
+#define LABELS_NAME "message"
+// Entrada del generador de etiquetas de Festival
+#define LABELS_FILE "parser/message.data"
 // Etiquetas obtenidas por Festival del mensaje a reproducir
-#define FILE_ALL "data/festival_labels.all"
+#define LABS_FILE "parser/labs/message.lab"
+// Archivo de sonido con el resultado de voz emocional
+#define WAVS_FILE "wavs/message.wav"
 // Texto de bienvenida
 #define TEXT_HELLO "Hola"
+// Valor asociado a emoción felicidad
+#define EMO_HAPPY 1
+// Valor asociado a emoción tristeza
+#define EMO_SAD 2
+// Valor asociado a emoción neutral
+#define EMO_NEUTRAL 0
+// Umbral para considerar un mensaje positivo
+#define THRESHOLD_HAPPY 0.55
+// Umbral para considerar un mensaje negativo
+#define THRESHOLD_SAD 0.45
 
 int go_on; // variable para mantener ejecución del bucle
 int g_port_ok=PORT_OK; // puerto del servidor positivo
@@ -171,7 +189,7 @@ int main(int argc, char **argv) {
 	// Instalar manejador de la señal SIGINT
 	signal(SIGINT, INThandler);
 	setPosition(FACE_NEUTRAL);
-	synthesizeText(TEXT_HELLO);
+	synthesizeText(TEXT_HELLO, EMO_HAPPY);
 	wcerr << "action_manager: Servidor listo" << endl;
 	// inicio del bucle. Se ejecuta hasta que se recibe la señal SIGINT
 	// (Ctrl-C)
@@ -222,6 +240,9 @@ void processCommand(const char *filename) {
 	fclose(file);
 	// procesar comando según las variables que haya
 	char value[length];
+	if (getValue(value, KEY_EMOTION, command)) {
+		g_flag_emotional=!g_flag_emotional;
+	}
 	if (getValue(value, KEY_MESSAGE, command)) {
 		processMessage(value);
 	}
@@ -341,7 +362,8 @@ void processMessage(const char *message) {
 	unsigned char position[8];
 	// calcular posición correspondiente a la valoración
 	// del mensaje
-	calculatePosition(position, ppl_ok, ppl_ko);
+	float tag=calculateTag(ppl_ok, ppl_ko);
+	calculatePosition(position, tag);
 	// char *result=new char[3*strlen(message)/2];
 	// if (!freeling_analyze(result, message, g_freeling_port)) return;
 	// model->analyze(result);
@@ -352,11 +374,16 @@ void processMessage(const char *message) {
 	// // del mensaje
 	// calculatePosition(position, countOk, countKo);
 	int change=setPosition(position, POSITION_WEIGHT);
-	synthesizeText(message); // reproducir mensaje
+	int emo=0;
+	if (tag>THRESHOLD_HAPPY) emo=EMO_HAPPY;
+	else if (tag<THRESHOLD_SAD) emo=EMO_SAD;
+	synthesizeText(message, emo); // reproducir mensaje
 	// reproducir mensaje según el cambio de ánimo
-	if (change>MOOD_TOLERANCE) synthesizeFile(FILE_HAPPIER);
-	else if (change<-MOOD_TOLERANCE) synthesizeFile(FILE_SADDER);
-	else synthesizeFile(FILE_NOCHANGE);
+	if (!g_flag_emotional) {
+		if (change>MOOD_TOLERANCE) synthesizeFile(FILE_HAPPIER, EMO_HAPPY);
+		else if (change<-MOOD_TOLERANCE) synthesizeFile(FILE_SADDER, EMO_SAD);
+		else synthesizeFile(FILE_NOCHANGE, EMO_NEUTRAL);
+	}
 	delete[] result;
 	for (int i=0;i<NEGATIVE_WORDS_NUMBER;i++) delete[] NEGATIVE_WORDS[i];
 	delete[] NEGATIVE_WORDS;
@@ -414,22 +441,25 @@ void processPosition(const char *value) {
 // Procesa un comando de reproducir texto
 // Entradas:
 // - filename: nombre del archivo con el texto a reproducir
-void processSpeech(const char *filename) {
-	synthesizeFile(filename);
+void processSpeech(const char *value) {
+	int emotion;
+	char filename[FILENAME_LENGTH];
+	sscanf(value, "%s\n%d", (char*)filename, &emotion);
+	synthesizeFile(filename, emotion);
 }
 
 // Sintetiza y reproduce el contenido de un archivo. Utiliza voz emocional 
 // si g_flag_emotional es true, y voz normal en caso contrario
 // Entradas:
 // - filename: nombre del archivo
-void synthesizeFile(const char *filename) {
+void synthesizeFile(const char *filename, int emo) {
 	if (!g_flag_emotional) {
 		say_file(filename);
 		return;
 	}
 	char *message=new char[MESSAGE_LENGTH];
 	readFile(message, filename);
-	synthesizeText(message);
+	synthesizeText(message, emo);
 	delete[] message;
 }
 
@@ -437,12 +467,35 @@ void synthesizeFile(const char *filename) {
 // si g_flag_emotional es true, y voz normal en caso contrario
 // Entradas:
 // - text: texto a reproducir
-void synthesizeText(const char *text) {
+void synthesizeText(const char *text, int emo) {
 	if (!g_flag_emotional) {
 		say_text(text);
 		return;
 	}
-	generate_labels(FILE_SEGS, FILE_ALL, text, true);
+	char emotion[10];
+	switch (emo) {
+		case 1:
+			strcpy(emotion, "happiness");
+			break;
+		case 2:
+			strcpy(emotion, "sadness");
+			break;
+		case 3:
+			strcpy(emotion, "surprise");
+			break;
+		case 4:
+			strcpy(emotion, "anger");
+			break;
+		default:
+			strcpy(emotion, "neutral");
+	}
+	generate_labels(LABELS_NAME, LABELS_FILE, text);
+	bool ok=true;
+	ok=ok&&!scp_transfer(LABS_FILE, HTS_USER, HTS_HOST, HTS_PATH_INPUT);
+	ok=ok&&!ssh_command(HTS_USER, HTS_HOST, HTS_COMMAND, emotion);
+	ok=ok&&!scp_receive(HTS_USER, HTS_HOST, HTS_PATH_OUTPUT, WAVS_FILE);
+	if (ok) run_system_command("aplay %s", WAVS_FILE);
+	else say_text(text);
 }
 
 // Escribe el contenido de un string en un archivo
@@ -496,16 +549,19 @@ int max(int a, int b) {
 // - result: array donde se almacenará el resultado
 // - countOk: perplejidad positiva
 // - countKo: perplejidad negativa
-void calculatePosition(unsigned char *result, float ppl_ok, float ppl_ko) {
+void calculatePosition(unsigned char *result, float tag) {
+		fprintf(stderr, "Tag: %f\n", tag); // debug
+	for (int i=0;i<POSITION_LENGTH;i++) {
+		result[i]=(unsigned char)((float)POSITION_MIN[i]+(float)(POSITION_MAX[i]-POSITION_MIN[i])*tag);
+	}
+}
+
+float calculateTag(float ppl_ok, float ppl_ko) {
 	if (ppl_ko<1E-12) ppl_ko=1E-12; // evitar divisiones por cero
 	float ratio=ppl_ko/ppl_ok;
 	// saturar entre OK_KO_RATIO y 1/OK_KO_RATIO
 	if (ratio>OK_KO_RATIO) ratio=OK_KO_RATIO;
 	else if (ratio<(1.0/OK_KO_RATIO)) ratio=1/OK_KO_RATIO;
 	// interpolación logarítmica
-	float tag=log(ratio*OK_KO_RATIO)/(2*log(OK_KO_RATIO));
-	fprintf(stderr, "Tag: %f\n", tag); // debug
-	for (int i=0;i<POSITION_LENGTH;i++) {
-		result[i]=(unsigned char)((float)POSITION_MIN[i]+(float)(POSITION_MAX[i]-POSITION_MIN[i])*tag);
-	}
+	return log(ratio*OK_KO_RATIO)/(2*log(OK_KO_RATIO));
 }

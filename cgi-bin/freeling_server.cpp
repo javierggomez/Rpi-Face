@@ -36,11 +36,16 @@ using namespace std;
 
 #include "freeling.h"
 #include "freeling/morfo/traces.h"
+#include "hardware.h"
 
 // Puerto por defecto del servidor
 #define PORT 25513
 // Longitud máxima del mensaje
 #define MESSAGE_MAX_LENGTH 65536
+
+#define GPIO_GREEN RPI_GPIO_P1_22
+#define GPIO_YELLOW RPI_GPIO_P1_15
+
 
 void INThandler(int sig);
 void processAnalysis(char *result, list<sentence> &ls);
@@ -58,8 +63,11 @@ int main (int argc, char **argv) {
   g_port=PORT;
   char c;
   int temp;
+  gpio_init();
+  gpio_fsel(GPIO_GREEN, false);
+  gpio_fsel(GPIO_YELLOW, false);
   // Opciones de línea de comandos
-  while ((c=getopt(argc, argv, "p:"))!=EOF) {
+  while ((c=getopt(argc, argv, "p:"))!=255) {
     switch (c) {
       case 'p':
         // puerto del servidor
@@ -121,7 +129,7 @@ int main (int argc, char **argv) {
   hmm_tagger tagger(L"es", path+L"tagger.dat", true, FORCE_TAGGER); 
   
   // crear servidor
-int newsockfd, portno;
+int newsockfd;
 socklen_t clilen;
 char buffer[MESSAGE_MAX_LENGTH];
 struct sockaddr_in serv_addr, cli_addr;
@@ -144,6 +152,10 @@ clilen = sizeof(cli_addr);
 int message_length;
 char result[MESSAGE_MAX_LENGTH];
 signal(SIGINT, INThandler);
+wcerr << "Listo" << endl;
+gpio_writePin(GPIO_GREEN, true);
+gpio_writePin(GPIO_YELLOW, false);
+wcerr << "Hecho" << endl;
 // procesar peticiones
 while (true) {
   wcerr << "freeling_server: Listo: " << endl;
@@ -189,6 +201,7 @@ while (true) {
 void INThandler(int sig) {
   signal(sig, SIG_IGN);
   close(sockfd);
+  gpio_close();
   wcerr << "Servidor cerrado." << endl;  
   exit(0);
 }
